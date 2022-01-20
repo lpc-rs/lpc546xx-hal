@@ -1,0 +1,12 @@
+[target.thumbv7em-none-eabihf]
+# nRF52840 DK
+runner = "probe-run --chip LPC54608J512ET180 --speed 4000"
+rustflags = [
+  "-C", "link-arg=-Tlink.x",  # required by cortex-m-rt
+  "-C", "link-arg=-Tdefmt.x", # defmt logs
+  "-C", "linker=flip-link",   # stack overflow protection
+]
+
+[build]
+# cross compilation target = ARM Cortex-M4F
+target = "thumbv7em-none-eabihf"

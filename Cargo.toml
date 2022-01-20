@@ -1,0 +1,89 @@
+[package]
+edition = "2018"
+authors = ["Alexis Marquet <alexis@alexismarquet.com>"]
+name = "lpc546xx-hal"
+categories = ["embedded", "hardware-support", "no-std"]
+description = "Peripheral access API for LPC546 series microcontrollers"
+documentation = "https::/docs.rs/crate/lpc546-hal"
+
+keywords = ["arm", "cortex-m", "lpc546xx", "hal"]
+license = "0BSD"
+readme = "README.md"
+repository = "?"
+version = "0.1.0"
+
+
+[workspace]
+members = ["self-tests"]
+
+[dependencies]
+cortex-m = "0.7.0"
+cortex-m-rt = "0.7.0"
+embedded-hal = {version = "0.2.6", features = ["unproven"]}
+embedded-time = "0.12.1"
+nb = "1.0.0"
+lpc546xx-pac = {version = "0.1.0", path = "../lpc-pac/lpc546xx-pac"}
+void = { version = "1.0.2", default-features = false }
+
+
+[dev-dependencies]
+defmt = "0.3.0"
+defmt-rtt = "0.3.1"
+defmt-test = "0.3.0"
+
+[dev-dependencies.panic-probe]
+version = "0.3.0"
+features = ["print-defmt"]
+
+[features]
+
+rt = ["lpc546xx-pac/rt"]
+disable-linker-script = []
+disable-pre-init-blob = []
+
+
+
+# Features based on Flash size (in kbytes)
+flash-256 = []
+flash-512 = []
+
+# Features based on RAM size (in kbytes)
+ram-136 = []
+ram-200 = []
+
+# Physical packages
+tfbga180 = []
+lqfp100 = []
+lqfp208 = []
+
+# Subfamily
+
+lpc54605 = ["lpc546xx-pac/lpc54605"]
+lpc54606 = ["lpc546xx-pac/lpc54606"]
+lpc54607 = ["lpc546xx-pac/lpc54607"]
+lpc54608 = ["lpc546xx-pac/lpc54608"]
+lpc54616 = ["lpc546xx-pac/lpc54616"]
+lpc54618 = ["lpc546xx-pac/lpc54618"]
+lpc54628 = ["lpc546xx-pac/lpc54628"]
+
+mcu-LPC54605J512ET100 = ["lpc54605","flash-512", "ram-200","tfbga180"]
+
+# others
+mcu-LPC54608J512ET180 = ["lpc54608","flash-512", "ram-200","tfbga180"]
+
+
+
+
+
+[profile.release]
+codegen-units = 1
+debug = 2
+debug-assertions = false # <-
+incremental = false
+lto = 'fat'
+opt-level = "s" # <-
+overflow-checks = false # <-
+
+[[example]]
+name = "gpio"
+required-features = ["rt"]
