@@ -1,3 +1,7 @@
+//! System configuration
+//!
+//!
+//!
 use crate::pac::*;
 use embedded_time::rate::{Extensions, Hertz};
 
@@ -50,6 +54,9 @@ impl Syscon {
     pub fn part_id(&self) -> u32 {
         self.rb.device_id0.read().partid().bits()
     }
+    pub fn get_main_clock_freq(self) -> Hertz {
+        self.clocks.main_clk
+    }
 }
 /// The main API for the SYSCON peripheral
 impl Syscon {
@@ -81,7 +88,7 @@ impl Syscon {
 /// implemented nor used outside of LPC82x HAL. Any changes to this trait won't
 /// be considered breaking changes.
 ///
-/// Compared to https://git.io/fjpf9 (in lpc-rs/lpc8xx-hal/lpc8xx-hal-common)
+/// Compared to <https://git.io/fjpf9> (in lpc-rs/lpc8xx-hal/lpc8xx-hal-common)
 /// we use a less minimal API in order to hide the fact that there are three
 /// different AHLBCKLCTRL?, which a HAL user shouldn't really need to know about.
 pub trait ClockControl {
@@ -300,6 +307,7 @@ impl SysconExt for SYSCON {
 /// Frozen clock frequencies
 ///
 /// The existence of this value indicates that the clock configuration can no longer be changed
+#[allow(dead_code)]
 #[derive(Clone, Copy)]
 pub struct Clocks {
     source: MainClkSelA,
@@ -312,6 +320,8 @@ impl Clocks {
         &self.source
     }
 }
+
+#[allow(dead_code)]
 pub struct Config {
     mainclksela: MainClkSelA,
     mainclkselb: MainClkSelB,

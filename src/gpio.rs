@@ -1,5 +1,7 @@
 //! GeneralPurpose Input / Output
-//!
+//! 
+//! Some GPIO are missing as of now because IOCON type `A` and type `I` are
+//! not yet implemented
 
 use crate::syscon::Syscon;
 use core::marker::PhantomData;
@@ -25,7 +27,7 @@ pub struct Floating;
 /// pulled down input (type state)
 pub struct PullDown;
 
-// Pulled up input (type state)
+/// Pulled up input (type state)
 pub struct PullUp;
 
 /// Open Drain input or output (type state)
@@ -146,18 +148,7 @@ pub enum IoType {
     TYPEI = 1,
     TYPEA = 2,
 }
-/*
-macro_rules! gpio {
-    (
-        $PX:ident, $Portn:expr,
-        [ 
-            $(
-                $PX_X:ident: ($pioX_X:ident, $ioconpioX_Xreg:ident, $Pinn:expr, $MODE:ty),
-            )+
-        ]
-    )  => {
 
-*/
 macro_rules! gpio {
     ($GPIO:ident, 
         [

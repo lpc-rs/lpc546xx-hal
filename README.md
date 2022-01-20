@@ -1,4 +1,6 @@
-# lpc546xx-hal
+> PR welcome! 
+
+# lpc546xx-hal [![crates.io](https://img.shields.io/crates/v/lpc546xx-hal.svg)](https://crates.io/crates/lpc546xx-hal) [![Documentation](https://docs.rs/lpc546xx-hal/badge.svg)](https://docs.rs/lpc546xx-hal) 
 
 Hardware Abstraction Layer crate for the lpc546xx family.
 
