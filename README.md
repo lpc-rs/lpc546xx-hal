@@ -27,6 +27,7 @@ If you want to run an example, you can run it by using:
 $ cargo run --example gpio --features=mcu-LPC54608J512ET180,rt  
 ```
 
+This HAL will also include a `__pre_init` stub in `startup-code/libstartup.a` to be called by cortex-m-rt when the "rt" feature is enabled. In this stub all the rams are turned on. you can disable this feature by using the `disable-linker-script` feature. But you should do it yourself, otherwise your program will not boot, as `cortex-m-rt` will try to init memory region that are not enabled.
 
 
 # Toolchain Setup
