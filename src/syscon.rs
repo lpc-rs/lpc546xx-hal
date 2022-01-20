@@ -54,6 +54,9 @@ impl Syscon {
     pub fn part_id(&self) -> u32 {
         self.rb.device_id0.read().partid().bits()
     }
+    pub fn get_main_clock_freq(self) -> Hertz {
+        self.clocks.main_clk
+    }
 }
 /// The main API for the SYSCON peripheral
 impl Syscon {
@@ -304,6 +307,7 @@ impl SysconExt for SYSCON {
 /// Frozen clock frequencies
 ///
 /// The existence of this value indicates that the clock configuration can no longer be changed
+#[allow(dead_code)]
 #[derive(Clone, Copy)]
 pub struct Clocks {
     source: MainClkSelA,
@@ -316,6 +320,8 @@ impl Clocks {
         &self.source
     }
 }
+
+#[allow(dead_code)]
 pub struct Config {
     mainclksela: MainClkSelA,
     mainclkselb: MainClkSelB,
