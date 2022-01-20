@@ -13,6 +13,10 @@ repository = "https://github.com/lpc-rs/lpc546xx-hal"
 version = "0.1.0"
 
 
+[package.metadata.docs.rs]
+features = ["mcu-LPC54628J512ET180", "rt"]
+targets = ["thumbv7em-none-eabihf"]
+
 [workspace]
 members = ["self-tests"]
 
