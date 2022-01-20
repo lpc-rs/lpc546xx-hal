@@ -52,12 +52,11 @@ ram-136 = []
 ram-200 = []
 
 # Physical packages
-tfbga180 = []
-lqfp100 = []
-lqfp208 = []
+io-100 = []
+io-180 = []
+io-208 = []
 
 # Subfamily
-
 lpc54605 = ["lpc546xx-pac/lpc54605"]
 lpc54606 = ["lpc546xx-pac/lpc54606"]
 lpc54607 = ["lpc546xx-pac/lpc54607"]
@@ -66,13 +65,40 @@ lpc54616 = ["lpc546xx-pac/lpc54616"]
 lpc54618 = ["lpc546xx-pac/lpc54618"]
 lpc54628 = ["lpc546xx-pac/lpc54628"]
 
-mcu-LPC54605J512ET100 = ["lpc54605","flash-512", "ram-200","tfbga180"]
+# available # of FLEXCOMM 
+flexcomm-9 = []
+flexcomm-10 = []
 
-# others
-mcu-LPC54608J512ET180 = ["lpc54608","flash-512", "ram-200","tfbga180"]
+mcu-LPC54605J512ET100 = ["lpc54605","flash-512", "ram-200","io-100", "flexcomm-9"]
+mcu-LPC54605J256ET100 = ["lpc54605","flash-256", "ram-136","io-100", "flexcomm-9"]
+mcu-LPC54605J512BD100 = ["lpc54605","flash-512", "ram-200","io-100", "flexcomm-9"]
+mcu-LPC54605J256BD100 = ["lpc54605","flash-256", "ram-136","io-100", "flexcomm-9"]
+mcu-LPC54605J512ET180 = ["lpc54605","flash-512", "ram-200","io-180", "flexcomm-10"]
+mcu-LPC54605J256ET180 = ["lpc54605","flash-256", "ram-136","io-180", "flexcomm-10"]
 
+mcu-LPC54606J512BD100 = ["lpc54606","flash-512", "ram-200","io-100", "flexcomm-9"]
+mcu-LPC54606J256BD100 = ["lpc54606","flash-256", "ram-136","io-100", "flexcomm-9"]
+mcu-LPC54606J512ET100 = ["lpc54606","flash-512", "ram-200","io-100", "flexcomm-9"]
+mcu-LPC54606J256ET100 = ["lpc54606","flash-256", "ram-136","io-100", "flexcomm-9"]
+mcu-LPC54606J512BD208 = ["lpc54606","flash-512", "ram-200","io-208", "flexcomm-10"]
+mcu-LPC54606J256ET180 = ["lpc54606","flash-256", "ram-136","io-180", "flexcomm-10"]
 
+mcu-LPC54607J256BD208 = ["lpc54607","flash-256", "ram-136","io-208", "flexcomm-10"]
+mcu-LPC54607J512ET180 = ["lpc54607","flash-512", "ram-200","io-180", "flexcomm-10"]
+mcu-LPC54607J256ET180 = ["lpc54607","flash-256", "ram-136","io-180", "flexcomm-10"]
 
+mcu-LPC54608J512BD208 = ["lpc54608","flash-512", "ram-200","io-208", "flexcomm-10"]
+mcu-LPC54608J512ET180 = ["lpc54608","flash-512", "ram-200","io-180", "flexcomm-10"] # <- LPCXpresso54608
+
+mcu-LPC54616J512BD100 = ["lpc54616","flash-512", "ram-200","io-100", "flexcomm-9"]
+mcu-LPC54616J512ET100 = ["lpc54616","flash-512", "ram-200","io-100", "flexcomm-9"]
+mcu-LPC54616J512BD208 = ["lpc54616","flash-512", "ram-200","io-208", "flexcomm-10"]
+mcu-LPC54616J256ET180 = ["lpc54616","flash-256", "ram-136","io-180", "flexcomm-10"]
+
+mcu-LPC54618J512BD208 = ["lpc54618","flash-512", "ram-200","io-208", "flexcomm-10"]
+mcu-LPC54618J512ET180 = ["lpc54618","flash-512", "ram-200","io-180", "flexcomm-10"]
+
+mcu-LPC54628J512ET180 = ["lpc54628","flash-512", "ram-200","io-180", "flexcomm-10"]
 
 
 [profile.release]
