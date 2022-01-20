@@ -1,0 +1,63 @@
+[package]
+edition = "2018"
+name = "lpc546xx-hal-tests"
+publish = false
+version = "0.0.0"
+
+# NOTE `[[test]].harness` is required for *each*
+# file in `tests/*.rs
+[[test]]
+name = "gpio-input-floating"
+harness = false # don't use the standard harness (`test` crate)
+
+[[test]]
+name = "gpio-input-pulled"
+harness = false
+
+[[test]]
+name = "gpio-output-open-drain"
+harness = false
+
+[[test]]
+name = "gpio-output-push-pull"
+harness = false
+
+[dev-dependencies]
+defmt = "0.3.0"
+defmt-rtt = "0.3.1"
+defmt-test = "0.3.0"
+void = { version = "1.0.2", default-features = false }
+cortex-m = "0.7.3"
+cortex-m-rt = { version = "0.7.1", features = ["device"] }
+
+# the HAL we are testing!
+[dev-dependencies.lpc546xx-hal]
+path = "../"
+features = ["mcu-LPC54608J512ET180", "rt"]
+
+
+
+
+[dev-dependencies.panic-probe]
+version = "0.3.0"
+features = ["print-defmt"]
+
+[features]
+# enable all defmt logging levels
+default = ["defmt-trace"]
+
+# do not modify these features
+defmt-default = []
+defmt-trace = []
+defmt-debug = []
+defmt-info = []
+defmt-warn = []
+defmt-error = []
+# NOTE don't forget to add a `[features]` section
+# (defmt requirement)!
+
+[profile.dev]
+# highly recommended! it speeds up running the test suite
+opt-level = "s"
+
+
