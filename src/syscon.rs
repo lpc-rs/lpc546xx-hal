@@ -1,3 +1,7 @@
+//! System configuration
+//!
+//!
+//!
 use crate::pac::*;
 use embedded_time::rate::{Extensions, Hertz};
 
@@ -81,7 +85,7 @@ impl Syscon {
 /// implemented nor used outside of LPC82x HAL. Any changes to this trait won't
 /// be considered breaking changes.
 ///
-/// Compared to https://git.io/fjpf9 (in lpc-rs/lpc8xx-hal/lpc8xx-hal-common)
+/// Compared to <https://git.io/fjpf9> (in lpc-rs/lpc8xx-hal/lpc8xx-hal-common)
 /// we use a less minimal API in order to hide the fact that there are three
 /// different AHLBCKLCTRL?, which a HAL user shouldn't really need to know about.
 pub trait ClockControl {
