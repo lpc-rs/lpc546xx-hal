@@ -3,13 +3,13 @@ edition = "2018"
 authors = ["Alexis Marquet <alexis@alexismarquet.com>"]
 name = "lpc546xx-hal"
 categories = ["embedded", "hardware-support", "no-std"]
-description = "Peripheral access API for LPC546 series microcontrollers"
+description = "Peripheral access API for LPC546xx series microcontrollers"
 documentation = "https::/docs.rs/crate/lpc546-hal"
 
 keywords = ["arm", "cortex-m", "lpc546xx", "hal"]
 license = "0BSD"
 readme = "README.md"
-repository = "?"
+repository = "https://github.com/lpc-rs/lpc546xx-hal"
 version = "0.1.0"
 
 
