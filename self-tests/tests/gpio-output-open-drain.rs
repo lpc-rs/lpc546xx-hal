@@ -10,14 +10,14 @@ use defmt_rtt as _;
 use lpc546xx_hal::{
     self as _,
     gpio::{
-        gpio::{P1_17, P1_18},
+        gpio::{Pin, P1_17},
         Floating, Input, OpenDrain, Output,
     },
 };
 use panic_probe as _;
 struct State {
     input_pin: Option<P1_17<Input<Floating>>>,
-    output_pin: P1_18<Output<OpenDrain>>,
+    output_pin: Pin<Output<OpenDrain>>,
 }
 
 #[defmt_test::tests]
@@ -36,7 +36,7 @@ mod tests {
         let gpio = dp.GPIO.split(&mut syscon, &mut iocon);
 
         let input_pin = Some(gpio.pio1_17.into_floating_input());
-        let output_pin = gpio.pio1_18.into_open_drain_output();
+        let output_pin = gpio.pio1_18.into_open_drain_output().downgrade();
 
         State {
             input_pin,
