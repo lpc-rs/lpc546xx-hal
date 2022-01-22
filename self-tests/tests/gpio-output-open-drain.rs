@@ -1,6 +1,6 @@
 // Required connections:
 //
-// - P1.17 <-> P1.18
+// - P3.26 <-> P3.27
 
 #![deny(warnings)]
 #![no_std]
@@ -10,14 +10,14 @@ use defmt_rtt as _;
 use lpc546xx_hal::{
     self as _,
     gpio::{
-        gpio::{P1_17, P1_18},
+        gpio::{Pin, P3_26},
         Floating, Input, OpenDrain, Output,
     },
 };
 use panic_probe as _;
 struct State {
-    input_pin: Option<P1_17<Input<Floating>>>,
-    output_pin: P1_18<Output<OpenDrain>>,
+    input_pin: Option<P3_26<Input<Floating>>>,
+    output_pin: Pin<Output<OpenDrain>>,
 }
 
 #[defmt_test::tests]
@@ -35,8 +35,8 @@ mod tests {
         let mut syscon = dp.SYSCON.freeze(Config::fro12m());
         let gpio = dp.GPIO.split(&mut syscon, &mut iocon);
 
-        let input_pin = Some(gpio.pio1_17.into_floating_input());
-        let output_pin = gpio.pio1_18.into_open_drain_output();
+        let input_pin = Some(gpio.pio3_26.into_floating_input());
+        let output_pin = gpio.pio3_27.into_open_drain_output().downgrade();
 
         State {
             input_pin,

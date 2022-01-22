@@ -19,6 +19,8 @@ pub use lpc546xx_pac::lpc54618 as pac;
 #[cfg(feature = "lpc54628")]
 pub use lpc546xx_pac::lpc54628 as pac;
 
+pub mod flexcomm;
 pub mod gpio;
 pub mod prelude;
+pub mod serial;
 pub mod syscon;

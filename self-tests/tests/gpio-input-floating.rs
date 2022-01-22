@@ -9,17 +9,14 @@
 use defmt_rtt as _; // transport layer for defmt logs
 use lpc546xx_hal::{
     self as _,
-    gpio::{
-        gpio::{P1_22, P3_1},
-        Floating, Input,
-    },
+    gpio::{gpio::Pin, Floating, Input},
 };
 use panic_probe as _; // panicking behavior
 
 struct State {
     // state shared between `#[test]` functions
-    input_ground: P3_1<Input<Floating>>,
-    input_vdd: P1_22<Input<Floating>>,
+    input_ground: Pin<Input<Floating>>,
+    input_vdd: Pin<Input<Floating>>,
 }
 
 #[defmt_test::tests]
@@ -34,8 +31,8 @@ mod tests {
         let mut syscon = dp.SYSCON.freeze(Config::fro12m());
         let gpio = dp.GPIO.split(&mut syscon, &mut iocon);
 
-        let input_ground = gpio.pio3_1.into_floating_input();
-        let input_vdd = gpio.pio1_22.into_floating_input();
+        let input_ground = gpio.pio3_1.into_floating_input().downgrade();
+        let input_vdd = gpio.pio1_22.into_floating_input().downgrade();
         State {
             input_ground,
             input_vdd,

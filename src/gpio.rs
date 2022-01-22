@@ -2,6 +2,7 @@
 //! 
 //! Some GPIO are missing as of now because IOCON type `A` and type `I` are
 //! not yet implemented
+#![deny(missing_docs)]
 
 use crate::syscon::Syscon;
 use core::marker::PhantomData;
@@ -116,24 +117,36 @@ impl PinMode for Output<PushPull> {
 /// GPIO Pin speed selection
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Speed {
+    /// Standard Speed
     StandardSlew = 0,
+    /// Fast Speed (usefull for I2C)
     FastSlew = 1,
 }
 
-#[allow(dead_code)]
+
+/// Pin Alternate function for peripheral IO
 pub enum AltMode {
+    /// Alternate function 0
     FUNC0 = 0,
+    /// Alternate function 1
     FUNC1 = 1,
+    /// Alternate function 2
     FUNC2 = 2,
+    /// Alternate function 3
     FUNC3 = 3,
+    /// Alternate function 4
     FUNC4 = 4,
+    /// Alternate function 5
     FUNC5 = 5,
+    /// Alternate function 6
     FUNC6 = 6,
+    /// Alternate function 7
     FUNC7 = 7,
 }
 
+#[allow(dead_code)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum Port {
+enum Port {
     P0 = 0,
     P1 = 1,
     P2 = 2,
@@ -142,8 +155,9 @@ pub enum Port {
     P5 = 5,
 }
 
+#[allow(dead_code)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum IoType {
+enum IoType {
     TYPED = 0,
     TYPEI = 1,
     TYPEA = 2,
@@ -199,97 +213,86 @@ macro_rules! gpio {
                     }
                 }
             }
-
-            $(
             /// Partially erased pin
-                pub struct $PX<MODE> {
-                    i: u8,
-                    _mode: PhantomData<MODE>,
+            pub struct Pin<MODE> {
+                pin_number: u8,
+                port_number: usize,
+                _mode: PhantomData<MODE>,
+            }
+
+            impl<MODE> Pin<MODE> {
+                /// Returns the port this pin is part of.
+                pub fn port(&self) -> usize {
+                    self.port_number
                 }
 
-                impl<MODE> $PX<MODE> {
-                    /// The port this pin is part of.
-                    pub const PORT: Port = Port::$PX;
+                /// Returns this pin's number inside its port.
+                pub fn pin(&self) -> u8 {
+                    self.pin_number
+                }
+            }
 
-                    /// Returns the port this pin is part of.
-                    pub fn port(&self) -> Port {
-                        Port::$PX
-                    }
+            impl<MODE> OutputPin for Pin<Output<MODE>> {
+                type Error = void::Void;
 
-                    /// Returns this pin's number inside its port.
-                    pub fn pin_number(&self) -> u8 {
-                        self.i
-                    }
+                fn set_high(&mut self) -> Result<(), Self::Error> {
+                    // NOTE(unsafe) atomic write to a stateless register
+                    unsafe { (*GPIO::ptr()).set[self.port()].write(|w| w.setp().bits(1 << self.pin()))};
+                    Ok(())
                 }
 
-                impl<MODE> OutputPin for $PX<Output<MODE>> {
-                    type Error = void::Void;
+                fn set_low(&mut self) -> Result<(), Self::Error> {
+                    // NOTE(unsafe) atomic write to a stateless register
+                    unsafe { (*GPIO::ptr()).clr[self.port()].write(|w| w.clrp().bits(1 << self.pin()))};
+                    Ok(())
+                }
+            }
 
-                    fn set_high(&mut self) -> Result<(), Self::Error> {
-                        // NOTE(unsafe) atomic write to a stateless register
-                        unsafe { (*GPIO::ptr()).set[$Portn].write(|w| w.setp().bits(1 << self.i))};
-                        //unsafe { (*$GPIOX::ptr()).bsrr.write(|w| w.bits(1 << self.i)) };
-                        Ok(())
-                    }
-
-                    fn set_low(&mut self) -> Result<(), Self::Error> {
-                        // NOTE(unsafe) atomic write to a stateless register
-                        unsafe { (*GPIO::ptr()).clr[$Portn].write(|w| w.clrp().bits(1 << self.i))};
-                        //unsafe { (*$GPIOX::ptr()).bsrr.write(|w| w.bits(1 << (self.i + 16))) };
-                        Ok(())
-                    }
+            impl<MODE> StatefulOutputPin for Pin<Output<MODE>> {
+                fn is_set_high(&self) -> Result<bool, Self::Error> {
+                    let is_high = !self.is_set_low()?;
+                    Ok(is_high)
                 }
 
-                impl<MODE> StatefulOutputPin for $PX<Output<MODE>> {
-                    fn is_set_high(&self) -> Result<bool, Self::Error> {
-                        let is_high = !self.is_set_low()?;
-                        Ok(is_high)
-                    }
+                fn is_set_low(&self) -> Result<bool, Self::Error> {
+                    // NOTE(unsafe) atomic read with no side effects
+                    let is_low = unsafe { (*GPIO::ptr()).pin[self.port()].read().bits() & (1 << self.pin()) == 0};
+                    Ok(is_low)
+                }
+            }
 
-                    fn is_set_low(&self) -> Result<bool, Self::Error> {
-                        // NOTE(unsafe) atomic read with no side effects
-                        let is_low = unsafe { (*GPIO::ptr()).pin[$Portn].read().bits() & (1 << self.i) == 0};
-                        Ok(is_low)
-                    }
+            impl<MODE> toggleable::Default for Pin<Output<MODE>> {}
+
+            impl<MODE> InputPin for Pin<Output<MODE>> {
+                type Error = void::Void;
+
+                fn is_high(&self) -> Result<bool, Self::Error> {
+                    let is_high = !self.is_low()?;
+                    Ok(is_high)
                 }
 
-                impl<MODE> toggleable::Default for $PX<Output<MODE>> {}
+                fn is_low(&self) -> Result<bool, Self::Error> {
+                    // NOTE(unsafe) atomic read with no side effects
+                    let is_low = unsafe { (*GPIO::ptr()).pin[self.port()].read().bits() & (1 << self.pin()) == 0};
+                    Ok(is_low)
+                }
+            }
 
-                impl<MODE> InputPin for $PX<Output<MODE>> {
-                    type Error = void::Void;
+            impl<MODE> InputPin for Pin<Input<MODE>> {
+                type Error = void::Void;
 
-                    fn is_high(&self) -> Result<bool, Self::Error> {
-                        let is_high = !self.is_low()?;
-                        Ok(is_high)
-                    }
-
-                    fn is_low(&self) -> Result<bool, Self::Error> {
-                        // NOTE(unsafe) atomic read with no side effects
-                        let is_low = unsafe { (*GPIO::ptr()).pin[$Portn].read().bits() & (1 << self.i) == 0};
-                        //unsafe { (*$GPIOX::ptr()).idr.read().bits() & (1 << self.i) == 0 };
-                        Ok(is_low)
-                    }
+                fn is_high(&self) -> Result<bool, Self::Error> {
+                    let is_high = !self.is_low()?;
+                    Ok(is_high)
                 }
 
-                impl<MODE> InputPin for $PX<Input<MODE>> {
-                    type Error = void::Void;
-
-                    fn is_high(&self) -> Result<bool, Self::Error> {
-                        let is_high = !self.is_low()?;
-                        Ok(is_high)
-                    }
-
-                    fn is_low(&self) -> Result<bool, Self::Error> {
-                        // NOTE(unsafe) atomic read with no side effects
-                        let is_low = unsafe { (*GPIO::ptr()).pin[$Portn].read().bits() & (1 << self.i) == 0};
-                        Ok(is_low)
-                    }
+                fn is_low(&self) -> Result<bool, Self::Error> {
+                    // NOTE(unsafe) atomic read with no side effects
+                    let is_low = unsafe { (*GPIO::ptr()).pin[self.port()].read().bits() & (1 << self.pin()) == 0};
+                    Ok(is_low)
                 }
-
-
-
-
-
+            }
+            $(
                 $(
                     /// Pin
                     pub struct $PX_X<MODE> {
@@ -297,15 +300,10 @@ macro_rules! gpio {
                     }
 
                     impl<MODE> $PX_X<MODE> {
-                        /// The port this pin is part of.
-                        pub const PORT: Port = Port::$PX;
-
-                        /// The pin's number inside its port.
-                        pub const PIN_NUMBER: u8 = $Pinn;
 
                         /// Returns the port this pin is part of.
-                        pub fn port(&self) -> Port {
-                            Port::$PX
+                        pub fn port(&self) -> u8 {
+                            Port::$PX as u8
                         }
 
                         /// Returns this pin's number inside its port.
@@ -532,9 +530,10 @@ macro_rules! gpio {
                         ///
                         /// This is useful when you want to collect the pins into an array where you
                         /// need all the elements to have the same type
-                        pub fn downgrade(self) -> $PX<Output<MODE>> {
-                            $PX{
-                                i: $Pinn,
+                        pub fn downgrade(self) -> Pin<Output<MODE>> {
+                            Pin{
+                                pin_number: $Pinn,
+                                port_number : $Portn,
                                 _mode: self._mode,
                             }
                         }
@@ -592,9 +591,10 @@ macro_rules! gpio {
                         ///
                         /// This is useful when you want to collect the pins into an array where you
                         /// need all the elements to have the same type
-                        pub fn downgrade(self) -> $PX<Input<MODE>> {
-                            $PX {
-                                i: $Pinn,
+                        pub fn downgrade(self) -> Pin<Input<MODE>> {
+                            Pin {
+                                pin_number: $Pinn,
+                                port_number: $Portn,
                                 _mode: self._mode,
                             }
                         }
@@ -1043,3 +1043,4 @@ gpio!(GPIO,
         ],
     ]
 );
+

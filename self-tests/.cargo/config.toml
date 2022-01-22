@@ -1,6 +1,6 @@
 [target.thumbv7em-none-eabihf]
 # nRF52840 DK
-runner = "probe-run --chip LPC54608J512ET180 "
+runner = "probe-run --chip LPC54608J512ET180"
 rustflags = [
 ]
 

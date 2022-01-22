@@ -1,6 +1,6 @@
 // Required connections:
 //
-// - P0.28 <-> P0.29
+// - P3.26 <-> P3.27
 
 #![deny(warnings)]
 #![no_std]
@@ -12,13 +12,13 @@ use panic_probe as _;
 use lpc546xx_hal::{
     self as _,
     gpio::{
-        gpio::{P1_17, P1_18},
+        gpio::{P3_26, P3_27},
         Floating, Input, Output, PushPull,
     },
 };
 struct State {
-    input_pin: P1_17<Input<Floating>>,
-    output_pin: P1_18<Output<PushPull>>,
+    input_pin: P3_26<Input<Floating>>,
+    output_pin: P3_27<Output<PushPull>>,
 }
 
 #[defmt_test::tests]
@@ -36,8 +36,8 @@ mod tests {
         let mut syscon = dp.SYSCON.freeze(Config::fro12m());
         let gpio = dp.GPIO.split(&mut syscon, &mut iocon);
 
-        let input_pin = gpio.pio1_17.into_floating_input();
-        let output_pin = gpio.pio1_18.into_push_pull_output();
+        let input_pin = gpio.pio3_26.into_floating_input();
+        let output_pin = gpio.pio3_27.into_push_pull_output();
         State {
             input_pin,
             output_pin,
