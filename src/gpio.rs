@@ -2,6 +2,7 @@
 //! 
 //! Some GPIO are missing as of now because IOCON type `A` and type `I` are
 //! not yet implemented
+#![deny(missing_docs)]
 
 use crate::syscon::Syscon;
 use core::marker::PhantomData;
@@ -116,19 +117,30 @@ impl PinMode for Output<PushPull> {
 /// GPIO Pin speed selection
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Speed {
+    /// Standard Speed
     StandardSlew = 0,
+    /// Fast Speed (usefull for I2C)
     FastSlew = 1,
 }
 
-#[allow(dead_code)]
+
+/// Pin Alternate function for peripheral IO
 pub enum AltMode {
+    /// Alternate function 0
     FUNC0 = 0,
+    /// Alternate function 1
     FUNC1 = 1,
+    /// Alternate function 2
     FUNC2 = 2,
+    /// Alternate function 3
     FUNC3 = 3,
+    /// Alternate function 4
     FUNC4 = 4,
+    /// Alternate function 5
     FUNC5 = 5,
+    /// Alternate function 6
     FUNC6 = 6,
+    /// Alternate function 7
     FUNC7 = 7,
 }
 
