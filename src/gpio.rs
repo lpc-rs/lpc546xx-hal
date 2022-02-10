@@ -1,12 +1,12 @@
 //! GeneralPurpose Input / Output
-//! 
+//!
 //! Some GPIO are missing as of now because IOCON type `A` and type `I` are
 //! not yet implemented
 #![deny(missing_docs)]
 
+use crate::pac;
 use crate::syscon::Syscon;
 use core::marker::PhantomData;
-use crate::pac;
 
 /// Extension trait to split a GPIO peripheral in independent pins and registers
 pub trait GpioExt {
@@ -123,7 +123,6 @@ pub enum Speed {
     FastSlew = 1,
 }
 
-
 /// Pin Alternate function for peripheral IO
 pub enum AltMode {
     /// Alternate function 0
@@ -164,11 +163,11 @@ enum IoType {
 }
 
 macro_rules! gpio {
-    ($GPIO:ident, 
+    ($GPIO:ident,
         [
             $(
                 $PX:ident, $Portn:expr,
-                    [ 
+                    [
                         $(
                             $PX_X:ident: ($pioX_X:ident, $ioconpioX_Xreg:ident, $Pinn:expr, $MODE:ty),
                         )+
@@ -329,7 +328,7 @@ macro_rules! gpio {
                                 });
 
                             }
-                        
+
                         }
 
                         fn with_mode<M, F, R>(
@@ -619,10 +618,9 @@ macro_rules! gpio {
     }
 }
 
-
 #[cfg(feature = "io-100")]
-gpio!(GPIO, 
-    [  
+gpio!(GPIO,
+    [
         P0, 0, [
             P0_0: (pio0_0, pio00, 0, Analog),
             P0_1: (pio0_1, pio01, 1, Analog),
@@ -695,8 +693,8 @@ gpio!(GPIO,
 );
 
 #[cfg(feature = "io-180")]
-gpio!(GPIO, 
-    [  
+gpio!(GPIO,
+    [
         P0, 0, [
             P0_0: (pio0_0, pio00, 0, Analog),
             P0_1: (pio0_1, pio01, 1, Analog),
@@ -856,8 +854,8 @@ gpio!(GPIO,
 );
 
 #[cfg(feature = "io-208")]
-gpio!(GPIO, 
-    [  
+gpio!(GPIO,
+    [
         P0, 0, [
             P0_0: (pio0_0, pio00, 0, Analog),
             P0_1: (pio0_1, pio01, 1, Analog),
@@ -1043,4 +1041,3 @@ gpio!(GPIO,
         ],
     ]
 );
-

@@ -45,20 +45,24 @@ pub enum Error {
 
 /// Interrupt event
 pub enum Event {
-    /// New data has been received.
-    ///
-    /// This event is cleared by reading a character from the UART.
-    Rxne,
-    /// New data can be sent.
-    ///
-    /// This event is cleared by writing a character to the UART.
-    ///
-    /// Note that this event does not mean that the character in the TX buffer
-    /// is fully transmitted. It only means that the TX buffer is ready to take
-    /// another character to be transmitted.
-    Txe,
-    /// Idle line state detected.
-    Idle,
+    /// Determines whether an interrupt occurs when a transmit error occurs,
+    /// based on the TXERR flag in the FIFOSTAT register.
+    /// This event is cleared by writing a 1 to FIFOSTAT.TXERR
+    TxErr,
+    /// Determines whether an interrupt occurs when a receive error occurs,
+    /// based on the RXERR flag in the FIFOSTAT register.
+    /// This Event is cleared by writing a 1 to FIFOSTAT.RXERR
+    RxErr,
+    /// Determines whether an interrupt occurs when a the transmit FIFO
+    /// reaches the level specified by the TXLVL field in the FIFOTRIG register.
+    /// Unclear how to clear this flag, I suppose it is cleared when writing a
+    /// new word to FIFOWR
+    TxLvl,
+    /// Determines whether an interrupt occurs when a the receive FIFO reaches
+    /// the level specified by the RXLVL field in the FIFOTRIG register.
+    /// Unclear how to clear this flag, I suppose it is cleared when reading a
+    /// new word from FIFORD
+    RxLvl,
 }
 
 /// Transfer data word length
@@ -262,9 +266,9 @@ impl_pins!(
     P5_8,  FUNC3, FLEXCOMM5, USART5, TxPin;
 );
 /// Serial abstraction
-pub struct Serial<USART> {
-    _usart: USART,
-    _flexcomm: Fc<USART>,
+pub struct Serial<USART, FLEXCOMM> {
+    usart: USART,
+    flexcomm: FLEXCOMM,
     rx: Rx<USART>,
     tx: Tx<USART>,
 }
@@ -279,8 +283,8 @@ pub struct Tx<USART> {
     _usart: PhantomData<USART>,
 }
 /// Serial Flexibl Interface
-pub struct Fc<USART> {
-    _usart: PhantomData<USART>,
+pub struct Fc<FLEXCOMM> {
+    _flexcomm: PhantomData<FLEXCOMM>,
 }
 
 /// Macro to implement all usart
@@ -290,42 +294,42 @@ macro_rules! impl_usart {
     )+) => {
         $(
             /// Serial trait to make implicit declaration possible trough prelude
-pub trait $SerialXExt<TX, RX, FC> {
+pub trait $SerialXExt<TX, RX> {
     /// Should return the usable UART or an InvalidConfig error
     fn usart(
         self,
-        fc: FC,
+        fc: $FLEXCOMMX,
         tx: TX,
         rx: RX,
         config: Config,
         syscon: &mut Syscon,
-    ) -> Result<Serial<$UARTX>, InvalidConfig>;
+    ) -> Result<Serial<$UARTX, $FLEXCOMMX>, InvalidConfig>;
 }
 
-impl<TX, RX, FC> $SerialXExt<TX, RX, FC> for $UARTX
+impl<TX, RX> $SerialXExt<TX, RX> for $UARTX
 where
     TX: TxPin<$UARTX, $FLEXCOMMX>,
     RX: RxPin<$UARTX, $FLEXCOMMX>,
-    FC: FlexCommAsUart<$UARTX> + ClockControl + FlexcommClockControl,
+    //FC: FlexCommAsUart<$UARTX> + ClockControl + FlexcommClockControl,
 {
     /// Configure USART peripheral according to `config`
     fn usart(
         self,
-        fc: FC,
+        fc: $FLEXCOMMX,
         tx: TX,
         rx: RX,
         config: Config,
         syscon: &mut Syscon,
-    ) -> Result<Serial<$UARTX>, InvalidConfig> {
+    ) -> Result<Serial<$UARTX, $FLEXCOMMX>, InvalidConfig> {
         Serial::$usartX(self, fc, tx, rx, config, syscon)
     }
 }
 
-impl Serial<$UARTX> {
+impl Serial<$UARTX, $FLEXCOMMX> {
     /// Configure USART peripheral according to `config`
-    pub fn $usartX<TX, RX, FC>(
+    pub fn $usartX<TX, RX>(
         usart: $UARTX,
-        flexcomm: FC,
+        flexcomm: $FLEXCOMMX,
         tx: TX,
         rx: RX,
         config: Config,
@@ -334,7 +338,7 @@ impl Serial<$UARTX> {
     where
         TX: TxPin<$UARTX, $FLEXCOMMX>,
         RX: RxPin<$UARTX, $FLEXCOMMX>,
-        FC: FlexCommAsUart<$UARTX> + ClockControl + FlexcommClockControl,
+        $FLEXCOMMX: FlexCommAsUart<$UARTX> + ClockControl + FlexcommClockControl,
     {
         tx.setup();
         rx.setup();
@@ -470,10 +474,8 @@ impl Serial<$UARTX> {
         }
 
         Ok(Serial {
-            _usart: usart,
-            _flexcomm: Fc {
-                _usart: PhantomData,
-            },
+            usart,
+            flexcomm,
             tx: Tx {
                 _usart: PhantomData,
             },
@@ -483,13 +485,81 @@ impl Serial<$UARTX> {
         })
     }
 
+    /// Starts listening for an interrupt event
+    pub fn listen(&mut self, event: Event) {
+        match event {
+            Event::TxErr => self.usart.fifointenset.modify(|_,w| w.txerr().set_bit()),
+            Event::RxErr => self.usart.fifointenset.modify(|_,w| w.rxerr().set_bit()),
+            Event::TxLvl => self.usart.fifointenset.modify(|_,w| w.txlvl().set_bit()),
+            Event::RxLvl => self.usart.fifointenset.modify(|_,w| w.rxlvl().set_bit()),
+        }
+    }
+
+    /// Stops listening for an interrupt event
+    pub fn unlisten(&mut self, event: Event) {
+        match event {
+            Event::TxErr => self.usart.fifointenclr.modify(|_,w| w.txerr().set_bit()),
+            Event::RxErr => self.usart.fifointenclr.modify(|_,w| w.rxerr().set_bit()),
+            Event::TxLvl => self.usart.fifointenclr.modify(|_,w| w.txlvl().set_bit()),
+            Event::RxLvl => self.usart.fifointenclr.modify(|_,w| w.rxlvl().set_bit()),
+        }
+    }
+
+    /// Returns a pending and enabled `Event`.
+    ///
+    /// Multiple `Event`s can be signaled at the same time. In that case, an arbitrary
+    /// pending event will be returned. Clearing the event condition will cause this
+    /// method to return the other pending event(s).
+    ///
+    /// For an event to be returned by this method, it must first be enabled by calling
+    /// `listen`.
+    ///
+    /// This method will never clear a pending event. If the event condition is not
+    /// resolved by the user, it will be returned again by the next call to
+    /// `pending_event`.
+
+    pub fn pending_event(&self) -> Option<Event> {
+        let fifointstat = self.usart.fifointstat.read();
+
+        // give higest priority to errors, and then to rxlevel to avoid overruns
+        if fifointstat.rxerr().bit_is_set(){
+            Some(Event::RxErr)
+        } else if fifointstat.txerr().bit_is_set(){
+            Some(Event::TxErr)
+        } else if fifointstat.rxlvl().bit_is_set(){
+            Some(Event::RxLvl)
+        } else if fifointstat.txlvl().bit_is_set(){
+            Some(Event::TxLvl)
+        } else {
+            None
+        }
+
+    }
+    /// Checks for reception errors that may have occurred.
+    ///
+    /// Note that multiple errors can be signaled at the same time. In that case,
+    /// calling this function repeatedly will return the remaining errors.
+    pub fn check_errors(&mut self) -> Result<(), Error> {
+        self.rx.check_errors()
+    }
+
+    /// Clears any signaled errors without returning them.
+    pub fn clear_errors(&mut self) {
+        self.rx.clear_errors()
+    }
+
     /// Split Usart in tx and rx part
     pub fn split(self) -> (Tx<$UARTX>, Rx<$UARTX>) {
         (self.tx, self.rx)
     }
+
+    /// Release the UART for new uses
+    pub fn release(self) -> ($UARTX, $FLEXCOMMX) {
+        (self.usart, self.flexcomm)
+    }
 }
 
-impl hal::serial::Read<u8> for Serial<$UARTX> {
+impl hal::serial::Read<u8> for Serial<$UARTX, $FLEXCOMMX> {
     type Error = Error;
 
     fn read(&mut self) -> nb::Result<u8, Error> {
@@ -497,7 +567,7 @@ impl hal::serial::Read<u8> for Serial<$UARTX> {
     }
 }
 
-impl hal::serial::Write<u8> for Serial<$UARTX> {
+impl hal::serial::Write<u8> for Serial<$UARTX, $FLEXCOMMX> {
     type Error = Error;
 
     fn flush(&mut self) -> nb::Result<(), Self::Error> {
@@ -659,9 +729,9 @@ impl_usart! {
     USART9: (usart9, FLEXCOMM9, Serial9Ext),
 }
 
-impl<USART> fmt::Write for Serial<USART>
+impl<USART, FLEXCOMM> fmt::Write for Serial<USART, FLEXCOMM>
 where
-    Serial<USART>: hal::serial::Write<u8>,
+    Serial<USART, FLEXCOMM>: hal::serial::Write<u8>,
 {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         let _ = s.as_bytes().iter().map(|c| block!(self.write(*c))).last();

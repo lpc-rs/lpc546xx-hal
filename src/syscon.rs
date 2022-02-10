@@ -1,5 +1,10 @@
 //! System configuration
 //!
+//! This module deals with clocks and resets.
+//! Implementation status:
+//! [x] fro12m
+//! [~] external
+//! [~] PLL
 //!
 //!
 use crate::pac::*;
@@ -126,10 +131,19 @@ impl Syscon {
         self.clocks.audio_pll
     }
     pub fn get_mclk_in_clock_freq(&self) -> Option<Hertz> {
-        Some(todo!())
+        self.clocks.mclkin
     }
     pub fn get_frg_clk_clock_freq(&self) -> Option<Hertz> {
-        Some(todo!())
+        match self.rb.frgclksel.read().sel().variant() {
+            Some(x) => match x {
+                syscon::frgclksel::SEL_A::MAIN_CLOCK => self.get_main_clock_freq(),
+                syscon::frgclksel::SEL_A::SYSTEM_PLL_OUTPUT => self.get_syspll_clock_clock_freq(),
+                syscon::frgclksel::SEL_A::FRO_12_MHZ => self.get_fro_12m_clock_freq(),
+                syscon::frgclksel::SEL_A::FRO_HF => self.get_fro_hf_clock_freq(),
+                syscon::frgclksel::SEL_A::NONE => None,
+            },
+            None => None,
+        }
     }
     pub fn get_fro_12m_clock_freq(&self) -> Option<Hertz> {
         Some(12_000_000.Hz())
@@ -544,6 +558,7 @@ impl SysconExt for SYSCON {
             clock_in: cfgr.xtal_freq,
             rtc_in: cfgr.rtc_32k_present,
             audio_pll: None,
+            mclkin: None,
         };
         let mut syscon = Syscon { rb: self, clocks };
         // we need to watch out for loosing clock. rely on fro_12m for setting up and freezing.
@@ -686,6 +701,7 @@ pub struct Clocks {
     clock_in: Option<Hertz>,
     rtc_in: Option<()>,
     audio_pll: Option<Hertz>,
+    mclkin: Option<Hertz>,
 }
 
 #[allow(dead_code)]
@@ -696,6 +712,7 @@ pub struct Config {
     pub mainclkselb: MainClkSelB,
     pub ahbclkdiv: AHBClkDiv,
     pub audiopll: Option<AudioPllConfig>,
+    pub mclkin: Option<Hertz>,
 }
 
 impl Default for Config {
@@ -708,6 +725,7 @@ impl Default for Config {
             mainclkselb: MainClkSelB::mainclka,
             ahbclkdiv: AHBClkDiv::NotDivided,
             audiopll: None,
+            mclkin: None,
         }
     }
 }
@@ -722,6 +740,7 @@ impl Config {
             mainclkselb: MainClkSelB::mainclka,
             ahbclkdiv: AHBClkDiv::NotDivided,
             audiopll: None,
+            mclkin: None,
         }
     }
 
@@ -733,6 +752,7 @@ impl Config {
             mainclkselb: MainClkSelB::mainclka,
             ahbclkdiv: AHBClkDiv::NotDivided,
             audiopll: None,
+            mclkin: None,
         }
     }
 
@@ -744,6 +764,7 @@ impl Config {
             mainclkselb: MainClkSelB::mainclka,
             ahbclkdiv: AHBClkDiv::NotDivided,
             audiopll: None,
+            mclkin: None,
         }
     }
     pub fn frohf_96mhz() -> Config {
@@ -754,6 +775,7 @@ impl Config {
             mainclkselb: MainClkSelB::mainclka,
             ahbclkdiv: AHBClkDiv::NotDivided,
             audiopll: None,
+            mclkin: None,
         }
     }
 }

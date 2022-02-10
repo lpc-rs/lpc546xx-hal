@@ -26,7 +26,7 @@ cortex-m-rt = "0.7.0"
 embedded-hal = {version = "0.2.6", features = ["unproven"]}
 embedded-time = "0.12.1"
 nb = "1.0.0"
-lpc546xx-pac = {version = "0.1.1", path = "../lpc-pac/lpc546xx-pac"}
+lpc546xx-pac = {version = "0.2.0", path = "../lpc-pac/lpc546xx-pac"}
 void = { version = "1.0.2", default-features = false }
 
 [dependencies.num]
