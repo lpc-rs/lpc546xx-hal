@@ -428,11 +428,11 @@ impl Serial<$UARTX, $FLEXCOMMX> {
         let cfg = usart.cfg.read();
 
         // If synchronous master mode is enabled, only configure the BRG value.
-        if cfg.syncen().bit_is_clear() && cfg.syncmst().bit_is_clear() {
+        if cfg.syncen().bit_is_set() && cfg.syncmst().bit_is_set() {
             brgval = source_clock / target_baud;
             usart.brg.write(|w| unsafe { w.bits(brgval - 1) });
         } else {
-            for osrval in num::range_step(best_osrval, 8, u32::MAX) {
+            for osrval in (8..best_osrval).rev() {
                 brgval = (((source_clock * 10) / ((osrval + 1) * target_baud)) - 5) / 10;
                 if brgval > 0xFFFF {
                     continue;
