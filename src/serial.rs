@@ -4,15 +4,14 @@
 
 #![deny(missing_docs)]
 
-use core::fmt;
-use core::marker::PhantomData;
-
 use crate::pac::{
     FLEXCOMM0, FLEXCOMM1, FLEXCOMM2, FLEXCOMM3, FLEXCOMM4, FLEXCOMM5, FLEXCOMM6, FLEXCOMM7,
     FLEXCOMM8, USART0, USART1, USART2, USART3, USART4, USART5, USART6, USART7, USART8,
 };
 #[cfg(feature = "flexcomm-10")]
 use crate::pac::{FLEXCOMM9, USART9};
+use core::fmt;
+use core::marker::PhantomData;
 
 use crate::hal;
 use crate::hal::prelude::*;
@@ -44,6 +43,7 @@ pub enum Error {
 }
 
 /// Interrupt event
+#[derive(Debug, PartialEq)]
 pub enum Event {
     /// Determines whether an interrupt occurs when a transmit error occurs,
     /// based on the TXERR flag in the FIFOSTAT register.
@@ -361,7 +361,7 @@ impl Serial<$UARTX, $FLEXCOMMX> {
         // TODO: implement trough config
         usart
             .fifotrig
-            .modify(|_, w| unsafe { w.txlvl().bits(1).rxlvl().bits(1) });
+            .modify(|_, w| unsafe { w.txlvl().bits(0).rxlvl().bits(0) });
 
         // enable tx and rx level
         usart
@@ -505,6 +505,16 @@ impl Serial<$UARTX, $FLEXCOMMX> {
         }
     }
 
+    /// Set the Rx fifo level threshold for RxLvl event
+    pub fn set_rx_threshold(&mut self, level: u8) {
+        self.usart.fifotrig.modify(|_,w| unsafe{w.rxlvl().bits(level-1)});
+    }
+
+    /// Set the Tx fifo level threshold for TxLvl event
+    pub fn set_tx_threshold(&mut self, level: u8) {
+        self.usart.fifotrig.modify(|_,w| unsafe{w.txlvl().bits(level-1)})
+    }
+
     /// Returns a pending and enabled `Event`.
     ///
     /// Multiple `Event`s can be signaled at the same time. In that case, an arbitrary
@@ -533,7 +543,15 @@ impl Serial<$UARTX, $FLEXCOMMX> {
         } else {
             None
         }
+    }
 
+    /// Returns nb::Error::WouldBlock if there is no pending event
+    /// returns the event if there is.
+    pub fn wait_for_pending_event(&self) -> nb::Result<Event, Error>{
+        match self.pending_event(){
+            None => Err(nb::Error::WouldBlock),
+            Some(x) => Ok(x),
+        }
     }
     /// Checks for reception errors that may have occurred.
     ///

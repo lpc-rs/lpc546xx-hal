@@ -1,5 +1,5 @@
 [package]
-edition = "2018"
+edition = "2021"
 authors = ["Alexis Marquet <alexis@alexismarquet.com>"]
 name = "lpc546xx-hal"
 categories = ["embedded", "hardware-support", "no-std"]
@@ -10,7 +10,7 @@ keywords = ["arm", "cortex-m", "lpc546xx", "hal"]
 license = "0BSD"
 readme = "README.md"
 repository = "https://github.com/lpc-rs/lpc546xx-hal"
-version = "0.1.1"
+version = "0.2.0"
 
 
 [package.metadata.docs.rs]
@@ -26,8 +26,11 @@ cortex-m-rt = "0.7.0"
 embedded-hal = {version = "0.2.6", features = ["unproven"]}
 embedded-time = "0.12.1"
 nb = "1.0.0"
-lpc546xx-pac = {version = "0.2.0", path = "../lpc-pac/lpc546xx-pac"}
+lpc546xx-pac = "0.2.0"
 void = { version = "1.0.2", default-features = false }
+lpc-usbd = "0.1.0"
+usb-device = "0.2.8"
+usbd-serial = "0.1.1"
 
 [dependencies.num]
 version = "0.4"
@@ -111,11 +114,11 @@ mcu-LPC54628J512ET180 = ["lpc54628","flash-512", "ram-200","io-180", "flexcomm-1
 [profile.release]
 codegen-units = 1
 debug = 2
-debug-assertions = false # <-
+debug-assertions = false 
 incremental = false
 lto = 'fat'
-opt-level = "s" # <-
-overflow-checks = false # <-
+opt-level = "s" 
+overflow-checks = false 
 
 [[example]]
 name = "gpio"

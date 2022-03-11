@@ -34,6 +34,12 @@ required-features = ["lpc546xx-hal/flexcomm-10", "local-flexcomm-10"]
 [[test]]
 name = "serial-api-wire"
 harness = false
+required-features = ["lpc546xx-hal/flexcomm-10", "local-flexcomm-10"]
+
+[[test]]
+name = "serial-api-wire-event"
+harness = false
+required-features = ["lpc546xx-hal/flexcomm-10", "local-flexcomm-10"]
 
 [dev-dependencies]
 defmt = "0.3.0"

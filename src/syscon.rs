@@ -98,10 +98,7 @@ impl Syscon {
         self.clocks.clock_in
     }
     pub fn get_clk_32k_clock_freq(&self) -> Option<Hertz> {
-        match self.clocks.rtc_in {
-            Some(_) => Some((32 * 1024).Hz()),
-            None => None,
-        }
+        self.clocks.rtc_in.map(|_| (32 * 1024).Hz())
     }
     pub fn get_syspll_clock_clock_freq(&self) -> Option<Hertz> {
         let _input_freq = match self.rb.syspllclksel.read().sel().variant().unwrap() {
@@ -114,6 +111,9 @@ impl Syscon {
         // TODO:
         None
     }
+    pub fn get_usbpll_clock_clock_freq(&self) -> Option<Hertz> {
+        todo!()
+    }
     pub fn get_fro_hf_clock_freq(&self) -> Option<Hertz> {
         match self.rb.froctrl.read().sel().bit() {
             false => Some(48_000_000.Hz()),
@@ -122,10 +122,7 @@ impl Syscon {
     }
     pub fn get_fro_hf_div_clock_freq(&self) -> Option<Hertz> {
         let div = self.rb.frohfclkdiv.read().div().bits() as u32;
-        match self.get_fro_hf_clock_freq() {
-            Some(freq) => Some(freq / (div + 1)),
-            None => None,
-        }
+        self.get_fro_hf_clock_freq().map(|freq| freq / (div + 1))
     }
     pub fn get_audio_pll_clk_clock_freq(&self) -> Option<Hertz> {
         self.clocks.audio_pll
@@ -193,10 +190,8 @@ impl Syscon {
     }
     pub fn get_system_clock_clock_freq(&self) -> Option<Hertz> {
         let ahbclkdiv = self.rb.ahbclkdiv.read().div().bits() as u32;
-        match self.get_main_clock_freq() {
-            Some(freq) => Some(freq / (ahbclkdiv + 1)),
-            None => None,
-        }
+        self.get_main_clock_freq()
+            .map(|freq| freq / (ahbclkdiv + 1))
     }
 
     // call fro API that is in the BOOTROM
@@ -292,7 +287,7 @@ impl Syscon {
 
     /// Check if peripheral clock is enabled
     pub fn is_clock_enabled<P: ClockControl>(&self, peripheral: &P) -> bool {
-        peripheral.is_clock_enabled(&self)
+        peripheral.is_clock_enabled(self)
     }
 
     /// Reset a peripheral
@@ -446,7 +441,6 @@ impl_clock_control!(IOCON, iocon, ahbclkctrl0, main_clock_get_source_clock);
 // impl_clock_control!((&mut GINT0, &mut GINT1), gint, ahbclkctrl0);
 // impl_clock_control!(PINT, pint, ahbclkctrl0);
 
-// impl_clock_control!(USB0, usb0_dev, ahbclkctrl1);
 // impl_clock_control!(USBFSH, usb0_hosts, ahbclkctrl2); // well what about usb0_hostm?
 // impl_clock_control!(USBHSH, usb1_host, ahbclkctrl2);
 // impl_clock_control!(UTICK0, utick, ahbclkctrl1);
@@ -491,6 +485,36 @@ impl_flexcomm_get_source_clock!(
 impl_flexcomm_get_source_clock!(
     flexcomm9_get_source_clock, 9;
 );
+
+impl ClockControl for USB0 {
+    fn enable_clock(&self, s: &mut Syscon) {
+        s.rb.ahbclkctrl1.modify(|_, w| w.usb0d().set_bit());
+        s.rb.pdruncfg0.modify(|_, w| w.pden_usb0_phy().clear_bit())
+    }
+
+    fn disable_clock(&self, s: &mut Syscon) {
+        s.rb.ahbclkctrl1.modify(|_, w| w.usb0d().clear_bit());
+        s.rb.pdruncfg0.modify(|_, w| w.pden_usb0_phy().set_bit());
+    }
+
+    fn is_clock_enabled(&self, s: &Syscon) -> bool {
+        s.rb.ahbclkctrl1.read().usb0d().bit()
+    }
+
+    fn get_clock_freq(&self, s: &Syscon) -> Option<Hertz> {
+        let div = s.rb.usb0clkdiv.read().div().bits();
+        let clk = match s.rb.usb0clksel.read().sel().variant() {
+            Some(x) => match x {
+                syscon::usb0clksel::SEL_A::FRO_HF => s.get_fro_hf_clock_freq(),
+                syscon::usb0clksel::SEL_A::SYSTEM_PLL_OUTPUT => s.get_syspll_clock_clock_freq(),
+                syscon::usb0clksel::SEL_A::USB_PLL_CLOCK => s.get_usbpll_clock_clock_freq(),
+                syscon::usb0clksel::SEL_A::NONE => None,
+            },
+            None => None,
+        };
+        clk.map(|x| x / (div as u32 + 1))
+    }
+}
 
 impl ClockControl for GPIO {
     fn enable_clock(&self, s: &mut Syscon) {
@@ -647,35 +671,32 @@ impl SysconExt for SYSCON {
                 .modify(|_, w| w.sel().rtc_osc_output()),
         }
 
-        match cfgr.audiopll {
-            Some(config) => {
-                match config.clksel {
-                    AudioPllClkSel::clk_in => syscon.rb.audpllclksel.modify(|_, w| w.sel().clkin()),
-                    AudioPllClkSel::fro_12m => {
-                        syscon.rb.audpllclksel.modify(|_, w| w.sel().fro_12_mhz())
-                    }
-                    AudioPllClkSel::none => syscon.rb.audpllclksel.modify(|_, w| w.sel().none()),
+        if let Some(config) = cfgr.audiopll {
+            match config.clksel {
+                AudioPllClkSel::clk_in => syscon.rb.audpllclksel.modify(|_, w| w.sel().clkin()),
+                AudioPllClkSel::fro_12m => {
+                    syscon.rb.audpllclksel.modify(|_, w| w.sel().fro_12_mhz())
                 }
-                syscon
-                    .rb
-                    .audpllndec
-                    .write(|w| unsafe { w.ndec().bits(config.ndec) });
-                syscon.rb.audpllndec.modify(|_, w| w.nreq().set_bit());
-
-                syscon
-                    .rb
-                    .audpllpdec
-                    .write(|w| unsafe { w.pdec().bits(config.pdec) });
-                syscon.rb.audpllpdec.modify(|_, w| w.preq().set_bit());
-
-                syscon
-                    .rb
-                    .audpllmdec
-                    .write(|w| unsafe { w.mdec().bits(config.mdec) });
-                syscon.rb.audpllmdec.modify(|_, w| w.mreq().set_bit());
-                syscon.clocks.audio_pll = Some(config.pllrate)
+                AudioPllClkSel::none => syscon.rb.audpllclksel.modify(|_, w| w.sel().none()),
             }
-            None => (),
+            syscon
+                .rb
+                .audpllndec
+                .write(|w| unsafe { w.ndec().bits(config.ndec) });
+            syscon.rb.audpllndec.modify(|_, w| w.nreq().set_bit());
+
+            syscon
+                .rb
+                .audpllpdec
+                .write(|w| unsafe { w.pdec().bits(config.pdec) });
+            syscon.rb.audpllpdec.modify(|_, w| w.preq().set_bit());
+
+            syscon
+                .rb
+                .audpllmdec
+                .write(|w| unsafe { w.mdec().bits(config.mdec) });
+            syscon.rb.audpllmdec.modify(|_, w| w.mreq().set_bit());
+            syscon.clocks.audio_pll = Some(config.pllrate)
         }
 
         let ahbdivider = match cfgr.ahbclkdiv {

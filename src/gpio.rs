@@ -501,8 +501,9 @@ macro_rules! gpio {
                             self
                         }
 
+                        /// Set Pin alternative Mode
                         #[allow(dead_code)]
-                        pub(crate) fn set_alt_mode(&self, mode: AltMode) {
+                        pub fn set_alt_mode(&self, mode: AltMode) {
                             unsafe{
                                 &(*IOCON::ptr()).$ioconpioX_Xreg.modify(|_,w| w.func().bits(mode as u8))
                             };

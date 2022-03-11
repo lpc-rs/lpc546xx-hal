@@ -15,7 +15,7 @@ fn main() -> ! {
     defmt::info!("clocking example");
 
     let dp = pac::Peripherals::take().unwrap();
-    let audiopllConfig = AudioPllConfig {
+    let audio_pll_config = AudioPllConfig {
         clksel: AudioPllClkSel::fro_12m,
         ndec: 1,
         mdec: 30580,
@@ -29,7 +29,8 @@ fn main() -> ! {
         mainclksela: MainClkSelA::fro_12m,
         mainclkselb: MainClkSelB::mainclka,
         ahbclkdiv: AHBClkDiv::NotDivided,
-        audiopll: Some(audiopllConfig),
+        audiopll: Some(audio_pll_config),
+        mclkin: None,
     };
     let syscon = dp.SYSCON.freeze(config);
     let audio_clk = syscon.get_audio_pll_clk_clock_freq().unwrap();
