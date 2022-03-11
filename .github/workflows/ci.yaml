@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request: {}
+
+jobs:
+  fmt:
+    name: Rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          components: rustfmt
+      - uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          components: clippy
+          target: thumbv7em-none-eabihf
+      - uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: clippy
+          # dummy feature to satisfy build.rs
+          args: --features mcu-LPC54628J512ET180 -- -D warnings
+  package:
+    name: Cargo package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: thumbv7em-none-eabihf
+      - uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: package
+          args: --no-verify
+  build_and_test:
+    strategy:
+      matrix:
+        channel: [stable, nightly]
+        features:
+          # LPC54605, 100 pin, 256K bytes flash, 9 flexcomms
+          - rt mcu-LPC54605J256BD100
+          # LPC54606, 100 pin, 512K bytes flash, 9 flexcomms
+          - rt mcu-LPC54606J512BD100
+          # LPC54607, 208 pin, 512K bytes flash, 10 flexcomms
+          - rt mcu-LPC54607J256BD208
+          # LPC54608, 180 pin, 512K bytes flash, 10 flexcomms
+          - rt mcu-LPC54608J512ET180
+          # LPC54616, 180 pin, 256K bytes flash, 10 flexcomms
+          - rt mcu-LPC54616J256ET180
+          # LPC54618, 208 pin, 512K bytes flash, 10 flexcomms
+          - rt mcu-LPC54618J512BD208
+          # LPC54628, 180 pin, 512K bytes flash, 10 flexcomms
+          - rt mcu-LPC54628J512ET180
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: thumbv7em-none-eabihf
+      - name: Examples
+        uses: actions-rs/cargo@v1
+        env:
+          RUSTFLAGS: "-D warnings"
+        with:
+          use-cross: true
+          command: build
+          args: --release --examples --features "${{ matrix.features }}"

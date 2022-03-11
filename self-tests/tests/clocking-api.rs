@@ -67,6 +67,7 @@ mod tests {
             mainclkselb: MainClkSelB::mainclka,
             ahbclkdiv: AHBClkDiv::NotDivided,
             audiopll: Some(audiopll_config),
+            mclkin: None,
         };
         let syscon = dp.SYSCON.freeze(config);
         let audio_clk = syscon.get_audio_pll_clk_clock_freq().unwrap();

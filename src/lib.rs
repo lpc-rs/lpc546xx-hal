@@ -24,3 +24,4 @@ pub mod gpio;
 pub mod prelude;
 pub mod serial;
 pub mod syscon;
+pub mod usb;

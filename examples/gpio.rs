@@ -15,8 +15,11 @@ fn main() -> ! {
 
     let gpio = dp.GPIO.split(&mut syscon, &mut iocon);
 
-    // pio3_14 is LED1 on devkit
+    #[cfg(feature = "io-100")]
+    let mut led1 = gpio.pio1_19.into_push_pull_output();
+    #[cfg(any(feature = "io-180", feature = "io-208"))]
     let mut led1 = gpio.pio3_14.into_push_pull_output();
+    // pio3_14 is LED1 on devkit
 
     loop {
         led1.toggle().unwrap();

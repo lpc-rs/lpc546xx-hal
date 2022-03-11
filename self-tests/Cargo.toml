@@ -29,10 +29,17 @@ harness = false
 [[test]]
 name = "serial-api-loopback"
 harness = false
+required-features = ["lpc546xx-hal/flexcomm-10", "local-flexcomm-10"]
 
 [[test]]
 name = "serial-api-wire"
 harness = false
+required-features = ["lpc546xx-hal/flexcomm-10", "local-flexcomm-10"]
+
+[[test]]
+name = "serial-api-wire-event"
+harness = false
+required-features = ["lpc546xx-hal/flexcomm-10", "local-flexcomm-10"]
 
 [dev-dependencies]
 defmt = "0.3.0"
@@ -56,7 +63,9 @@ features = ["print-defmt"]
 
 [features]
 # enable all defmt logging levels
-default = ["defmt-trace"]
+default = ["defmt-trace", "local-flexcomm-10"]
+
+local-flexcomm-10 = []
 
 # do not modify these features
 defmt-default = []
