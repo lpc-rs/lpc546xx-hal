@@ -16,10 +16,10 @@ Add the `lpc546xx-hal` crate to your dependencies in your Cargo.toml and make su
 For example, for the LPCXpresso54608 board that sports a LPC54608J512ET180: 
 
 ```toml
-lpc546xx-hal = { version = "0.1.0", features = ["mcu-LPC54608J512ET180", "rt"] }
+lpc546xx-hal = { version = "0.2.0", features = ["mcu-LPC54608J512ET180", "rt"] }
 ```
 
-This will select the appropriate memory.x linker script depending on both your RAM and FLASH, the correct feature set from the peripheral access crate, and the correct interrupt vector for your device.
+This will select the appropriate memory.x linker script depending on both your RAM and FLASH, the correct feature set from the peripheral access crate, and the correct interrupt vector for your device. You can disable this feature using the `disable-linker-script` feature.
 
 If you look into [`Cargo.toml` file](https://github.com/lpc-rs/lpc546xx-hal/blob/master/Cargo.toml), you will see the supported devices. 
 
@@ -29,7 +29,7 @@ If you want to run an example, you can run it by using:
 $ cargo run --example gpio --features=mcu-LPC54608J512ET180,rt  
 ```
 
-This HAL will also include a `__pre_init` stub in `startup-code/libstartup.a` to be called by cortex-m-rt when the "rt" feature is enabled. In this stub all the rams are turned on. you can disable this feature by using the `disable-linker-script` feature. But you should do it yourself, otherwise your program will not boot, as `cortex-m-rt` will try to init memory region that are not enabled.
+This HAL will also include a `__pre_init` stub in `startup-code/libstartup.a` to be called by cortex-m-rt when the "rt" feature is enabled. In this stub all the rams are turned on. You can disable this feature by using the `disable-pre-init-blob` feature. But you should do it yourself, otherwise your program will not boot, as `cortex-m-rt` will try to init memory region that are not enabled.
 
 
 # Toolchain Setup
