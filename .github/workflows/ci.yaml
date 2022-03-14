@@ -81,10 +81,11 @@ jobs:
           profile: minimal
           toolchain: stable
           target: thumbv7em-none-eabihf
-      - uses: actions-rs/install@v0.1.2
+      - uses: actions-rs/cargo@v1
         with: 
-          crate: flip-link
-          version: latest
+          use-cross: true
+          command: install
+          args: flip-link
       - name: Examples
         uses: actions-rs/cargo@v1
         env:
