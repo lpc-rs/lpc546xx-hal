@@ -5,8 +5,12 @@ use crate::{
     syscon::{ClockControl, Syscon},
 };
 use lpc_usbd::{self, UsbPeripheral};
+
+/// Usb Full Speed driver struct
 pub struct USBFS {
+    /// USB FS device peripheral
     pub usb_dev: pac::USB0,
+    /// USB FS host peripheral (needed to set up as device).
     pub usb_host: pac::USBFSH,
 }
 
