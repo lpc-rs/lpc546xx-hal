@@ -2,7 +2,6 @@
 //!
 //! Some GPIO are missing as of now because IOCON type `A` and type `I` are
 //! not yet implemented
-#![deny(missing_docs)]
 
 use crate::pac;
 use crate::syscon::Syscon;

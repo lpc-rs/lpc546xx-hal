@@ -1,6 +1,6 @@
 > PR welcome! 
 
-# lpc546xx-hal [![crates.io](https://img.shields.io/crates/v/lpc546xx-hal.svg)](https://crates.io/crates/lpc546xx-hal) [![Documentation](https://docs.rs/lpc546xx-hal/badge.svg)](https://docs.rs/lpc546xx-hal) 
+# lpc546xx-hal [![crates.io](https://img.shields.io/crates/v/lpc546xx-hal.svg)](https://crates.io/crates/lpc546xx-hal) [![Documentation](https://docs.rs/lpc546xx-hal/badge.svg)](https://docs.rs/lpc546xx-hal) [![CI](https://github.com/lpc-rs/lpc546xx-hal/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/lpc-rs/lpc546xx-hal/actions/workflows/ci.yaml)
 
 Hardware Abstraction Layer crate for the lpc546xx family.
 

@@ -4,7 +4,6 @@
 //!
 //!
 
-#![deny(missing_docs)]
 use crate::pac::syscon::fclksel::SEL_A;
 
 use crate::pac::{

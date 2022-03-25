@@ -6,48 +6,72 @@
 //! [~] external
 //! [~] PLL
 //!
+//! All readings are done trough option, with None propagating trough
+//! the clock tree. If the return of a get_xxx_freq returns a None,
+//! it means that the corresponding clock is not configured correctly.
 //!
 use crate::pac::*;
 use embedded_time::rate::{Extensions, Hertz};
 
-// System clock mux source
+/// System clock mux source
 #[derive(Clone, Copy)]
 pub enum MainClkSelA {
+    /// free running oscillator 12 MHz
     fro_12m,
+    /// external clock input
     clk_in,
+    /// watchdog timer
     wdt_clk(WdtClkDivSel, WdtClkFreqSel),
-    fro_hf(FroOsc),
+    /// free running oscillator high frequency (48/96 MHz)
+    fro_hf(FroHfOsc),
 }
 
+/// Watchdog clock divider select
 #[derive(Clone, Copy)]
 pub struct WdtClkDivSel {
-    divsel: u8, // output is divided by (divsel+1)*2
+    /// Divider selector. output is divided by (divsel+1)*2
+    divsel: u8,
 }
 
+/// Watchdog clock freq select
 #[derive(Clone, Copy)]
 pub struct WdtClkFreqSel {
-    freqsel: u8, // cant math it
+    /// Frequency select. cannot math it out
+    freqsel: u8,
 }
 
+/// Free runing oscillator High Frequency
 #[derive(Clone, Copy)]
-pub enum FroOsc {
+pub enum FroHfOsc {
+    /// Free running oscillator at 48MHz
     Fro48Mhz,
+    /// Free running oscillator at 96MHz
     Fro96Mhz,
 }
+
+/// Main clock selector B
 #[derive(Clone, Copy)]
 pub enum MainClkSelB {
+    /// source is main clock A
     mainclka,
+    /// source is PLL Clock
     pll_clk,
+    /// source is 32768 Hz (rtc) clock
     clk_32k,
 }
 
+/// AHB clock divider
 #[derive(Clone, Copy)]
 pub enum AHBClkDiv {
+    /// Clock is not divided
     NotDivided,
+    /// Clock is divided by u8
     DividedBy(u8),
 }
 
+/// Audio Pll Configuration
 pub struct AudioPllConfig {
+    /// clock source selection
     pub clksel: AudioPllClkSel,
     /// ndec value, generated with NXP Config Tools
     pub ndec: u16,
@@ -60,30 +84,42 @@ pub struct AudioPllConfig {
     /// pll rate, from NXP Config Tools
     pub pllrate: Hertz,
 }
+/// Audio PLL clock selection
 pub enum AudioPllClkSel {
+    /// clock input
     clk_in,
+    /// free running oscillator 12 MHz
     fro_12m,
+    /// no input
     none,
 }
 
+/// module singleton.
 pub struct Syscon {
+    /// SYSCON register block
     pub(crate) rb: SYSCON,
+    /// Clocks
     pub clocks: Clocks,
 }
 impl Syscon {
     // TODO: relocate
+    /// Get revision ID
     pub fn rev_id(&self) -> u32 {
         self.rb.device_id1.read().revid().bits()
     }
+
+    /// get Part ID
     pub fn part_id(&self) -> u32 {
         self.rb.device_id0.read().partid().bits()
     }
+
+    /// Get main clock frequency depending on syscon configuration.
     pub fn get_main_clock_freq(&self) -> Option<Hertz> {
         match self.rb.mainclkselb.read().sel().variant().unwrap() {
             syscon::mainclkselb::SEL_A::MAINCLKSELA => {
                 match self.rb.mainclksela.read().sel().variant() {
                     syscon::mainclksela::SEL_A::FRO_12_MHZ => self.get_fro_12m_clock_freq(),
-                    syscon::mainclksela::SEL_A::CLKIN => self.get_clock_xtal_in(),
+                    syscon::mainclksela::SEL_A::CLKIN => self.get_clock_xtal_in_freq(),
                     syscon::mainclksela::SEL_A::WATCHDOG_OSCILLATOR => {
                         self.get_wdt_clk_clock_freq()
                     }
@@ -94,16 +130,22 @@ impl Syscon {
             syscon::mainclkselb::SEL_A::RTC_OSC_OUTPUT => self.get_clk_32k_clock_freq(),
         }
     }
-    pub fn get_clock_xtal_in(&self) -> Option<Hertz> {
+
+    /// Get crystal input frequency (user supplied)
+    pub fn get_clock_xtal_in_freq(&self) -> Option<Hertz> {
         self.clocks.clock_in
     }
+
+    /// Get 32768 clock frequency
     pub fn get_clk_32k_clock_freq(&self) -> Option<Hertz> {
         self.clocks.rtc_in.map(|_| (32 * 1024).Hz())
     }
+
+    /// Get System pll clock frequency
     pub fn get_syspll_clock_clock_freq(&self) -> Option<Hertz> {
         let _input_freq = match self.rb.syspllclksel.read().sel().variant().unwrap() {
             syscon::syspllclksel::SEL_A::FRO_12_MHZ => self.get_fro_12m_clock_freq(),
-            syscon::syspllclksel::SEL_A::CLKIN => self.get_clock_xtal_in(),
+            syscon::syspllclksel::SEL_A::CLKIN => self.get_clock_xtal_in_freq(),
             syscon::syspllclksel::SEL_A::WATCHDOG_OSCILLATOR => self.get_wdt_clk_clock_freq(),
             syscon::syspllclksel::SEL_A::RTC_OSC_OUTPUT => self.get_clk_32k_clock_freq(),
             syscon::syspllclksel::SEL_A::NONE => return None,
@@ -111,25 +153,37 @@ impl Syscon {
         // TODO:
         None
     }
+
+    /// Get usb PLL clock clock freq.
     pub fn get_usbpll_clock_clock_freq(&self) -> Option<Hertz> {
         todo!()
     }
+
+    /// Get Free running oscillator high frequency frequency
     pub fn get_fro_hf_clock_freq(&self) -> Option<Hertz> {
         match self.rb.froctrl.read().sel().bit() {
             false => Some(48_000_000.Hz()),
             true => Some(96_000_000.Hz()),
         }
     }
+
+    /// Get Free running oscillator high frequency divided frequency
     pub fn get_fro_hf_div_clock_freq(&self) -> Option<Hertz> {
         let div = self.rb.frohfclkdiv.read().div().bits() as u32;
         self.get_fro_hf_clock_freq().map(|freq| freq / (div + 1))
     }
+
+    /// Get audio pll clock frequency
     pub fn get_audio_pll_clk_clock_freq(&self) -> Option<Hertz> {
         self.clocks.audio_pll
     }
+
+    /// Get Mclk frequency (user supplied)
     pub fn get_mclk_in_clock_freq(&self) -> Option<Hertz> {
         self.clocks.mclkin
     }
+
+    /// Get Fractional Rate Generator clock frequency
     pub fn get_frg_clk_clock_freq(&self) -> Option<Hertz> {
         match self.rb.frgclksel.read().sel().variant() {
             Some(x) => match x {
@@ -142,9 +196,13 @@ impl Syscon {
             None => None,
         }
     }
+
+    /// Get Free running oscillator 12MHz frequency (constant)
     pub fn get_fro_12m_clock_freq(&self) -> Option<Hertz> {
         Some(12_000_000.Hz())
     }
+
+    /// Get Watchdog timer clock frequency
     pub fn get_wdt_clk_clock_freq(&self) -> Option<Hertz> {
         match self.rb.pdruncfg0.read().pden_wdt_osc().bit() {
             true => {
@@ -188,26 +246,32 @@ impl Syscon {
             false => None,
         }
     }
+
+    /// Get system clock frequency
     pub fn get_system_clock_clock_freq(&self) -> Option<Hertz> {
         let ahbclkdiv = self.rb.ahbclkdiv.read().div().bits() as u32;
         self.get_main_clock_freq()
             .map(|freq| freq / (ahbclkdiv + 1))
     }
 
-    // call fro API that is in the BOOTROM
+    /// Set the Free Running Oscillator frequency.
+    ///
+    /// Calls fro API that is in the BOOTROM.
     fn set_fro_frequency(&self, ifreq: u32) {
         // cannot do this any other way than unsafe
         let code: extern "C" fn(u32) = unsafe { core::mem::transmute(0x0300_91DF as *const ()) };
         (code)(ifreq);
     }
 
+    /// Setup Free running oscillator clocking.
     fn clock_setup_froclocking(&mut self, ifreq: u32) {
+        // the only allowed fro freq are 12MHz | 48MHz | 96MHz
         match ifreq {
             12_000_000 | 48_000_000 | 96_000_000 => (),
             _ => panic!(),
         }
 
-        /* Power up the FRO and set this as the base clock */
+        // Power up the FRO and set this as the base clock
         self.rb.pdruncfgclr0.modify(|_, w| w.pden_fro().set_bit());
 
         let usb_adj = self.rb.froctrl.read().usbclkadj().bit();
@@ -251,9 +315,9 @@ impl Syscon {
             .modify(|_, w| unsafe { w.flashtim().bits(flash_cycles - 1) });
     }
 
+    /// Set Voltage for frequency
+    ///
     /// Power API, reverse engineering from libpower.a
-
-    /// RE'd function
     fn set_voltage_for_freq(&mut self, freq: u32) {
         let val = match freq {
             0..=100_000_000 => 0xb,
@@ -316,6 +380,7 @@ pub trait ClockControl {
     /// Check if peripheral clock is enabled
     fn is_clock_enabled(&self, s: &Syscon) -> bool;
 
+    /// get the peripheral's clock frequency
     fn get_clock_freq(&self, s: &Syscon) -> Option<Hertz>;
 }
 
@@ -447,7 +512,7 @@ impl_clock_control!(IOCON, iocon, ahbclkctrl0, main_clock_get_source_clock);
 
 // impl_clock_control!(RTC, rtc, ahbclkctrl0);
 
-// general system clock
+/// General system clock
 fn main_clock_get_source_clock(s: &Syscon) -> Option<Hertz> {
     s.get_main_clock_freq()
 }
@@ -486,6 +551,7 @@ impl_flexcomm_get_source_clock!(
     flexcomm9_get_source_clock, 9;
 );
 
+/// Clock control for USB0 peripheral
 impl ClockControl for USB0 {
     fn enable_clock(&self, s: &mut Syscon) {
         s.rb.ahbclkctrl1.modify(|_, w| w.usb0d().set_bit());
@@ -516,6 +582,9 @@ impl ClockControl for USB0 {
     }
 }
 
+/// Clock Control for GPIO peripherals
+///
+/// ATM the  clock control is implemend for GPIO0/1/2/3/4/5 as a single peripheral.
 impl ClockControl for GPIO {
     fn enable_clock(&self, s: &mut Syscon) {
         s.rb.ahbclkctrl0.modify(|_, w| w.gpio0().set_bit());
@@ -550,6 +619,7 @@ impl ClockControl for GPIO {
     }
 }
 
+/// Reset Control trait for peripherals
 pub trait ResetControl {
     /// Internal method to assert peripheral reset
     fn assert_reset(&self, syscon: &mut Syscon);
@@ -571,11 +641,13 @@ impl ResetControl for GPIO {
     }
 }
 
-/// Extension trait that freezes the `RCC` peripheral with provided clocks configuration
+/// Extension trait that freezes the `SYSCON` peripheral with provided clocks configuration
 pub trait SysconExt {
+    /// Freeze device clock tree according to config
     fn freeze(self, cfgr: Config) -> Syscon;
 }
 
+/// Implementation of the external trait for SYSCON
 impl SysconExt for SYSCON {
     fn freeze(self, cfgr: Config) -> Syscon {
         let clocks = Clocks {
@@ -593,8 +665,7 @@ impl SysconExt for SYSCON {
         syscon.rb.mainclksela.write(|w| w.sel().fro_12_mhz());
         syscon.rb.mainclkselb.write(|w| w.sel().mainclksela());
 
-        //let system_clk = syscon.get_system_clock_clock_freq().unwrap();
-
+        // configure the correct main clock selector A
         match cfgr.mainclksela {
             MainClkSelA::fro_12m => {
                 // select free running oscillator 12mhz as clock source a
@@ -645,12 +716,12 @@ impl SysconExt for SYSCON {
             }
             MainClkSelA::fro_hf(fro) => {
                 let t_freq = match fro {
-                    FroOsc::Fro48Mhz => 48_000_000,
-                    FroOsc::Fro96Mhz => 96_000_000,
+                    FroHfOsc::Fro48Mhz => 48_000_000,
+                    FroHfOsc::Fro96Mhz => 96_000_000,
                 };
                 match fro {
-                    FroOsc::Fro48Mhz => syscon.rb.froctrl.modify(|_, w| w.sel().clear_bit()),
-                    FroOsc::Fro96Mhz => syscon.rb.froctrl.modify(|_, w| w.sel().set_bit()),
+                    FroHfOsc::Fro48Mhz => syscon.rb.froctrl.modify(|_, w| w.sel().clear_bit()),
+                    FroHfOsc::Fro96Mhz => syscon.rb.froctrl.modify(|_, w| w.sel().set_bit()),
                 }
                 syscon.clock_setup_froclocking(t_freq);
                 let f = syscon.get_fro_hf_clock_freq().unwrap().0;
@@ -719,24 +790,39 @@ impl SysconExt for SYSCON {
 #[allow(dead_code)]
 #[derive(Clone, Copy)]
 pub struct Clocks {
+    /// External clock input
     clock_in: Option<Hertz>,
+    /// RTC clock input (present or not, can only be 32768 Hz)
     rtc_in: Option<()>,
+    /// Audio PLL clock
     audio_pll: Option<Hertz>,
+    /// Mclk clock
     mclkin: Option<Hertz>,
 }
 
+/// Syscon Config structure
 #[allow(dead_code)]
 pub struct Config {
+    /// crystal freq
     pub xtal_freq: Option<Hertz>,
+    /// RTC xtal present
     pub rtc_32k_present: Option<()>,
+    /// main clock A selection
     pub mainclksela: MainClkSelA,
+    /// main clock B selection
     pub mainclkselb: MainClkSelB,
+    /// ahb Clock divider
     pub ahbclkdiv: AHBClkDiv,
+    /// audio pll configuration
     pub audiopll: Option<AudioPllConfig>,
+    /// mclk input freq
     pub mclkin: Option<Hertz>,
 }
 
+/// Default clock configuration
 impl Default for Config {
+    /// Default config
+    /// Uses the 12MHz Free running oscillator
     #[inline]
     fn default() -> Config {
         Config {
@@ -752,6 +838,7 @@ impl Default for Config {
 }
 
 impl Config {
+    /// Uses FRO 12MHz.
     #[inline]
     pub fn fro12m() -> Config {
         Config {
@@ -765,6 +852,7 @@ impl Config {
         }
     }
 
+    /// Uses the external xtal.
     pub fn external(xtal_freq: Hertz) -> Config {
         Config {
             xtal_freq: Some(xtal_freq),
@@ -777,22 +865,25 @@ impl Config {
         }
     }
 
+    /// Uses the FRO HF at 48MHz.
     pub fn frohf_48mhz() -> Config {
         Config {
             xtal_freq: None,
             rtc_32k_present: None,
-            mainclksela: MainClkSelA::fro_hf(FroOsc::Fro48Mhz),
+            mainclksela: MainClkSelA::fro_hf(FroHfOsc::Fro48Mhz),
             mainclkselb: MainClkSelB::mainclka,
             ahbclkdiv: AHBClkDiv::NotDivided,
             audiopll: None,
             mclkin: None,
         }
     }
+
+    /// Uses the FRO HF at 96MHz.
     pub fn frohf_96mhz() -> Config {
         Config {
             xtal_freq: None,
             rtc_32k_present: None,
-            mainclksela: MainClkSelA::fro_hf(FroOsc::Fro96Mhz),
+            mainclksela: MainClkSelA::fro_hf(FroHfOsc::Fro96Mhz),
             mainclkselb: MainClkSelB::mainclka,
             ahbclkdiv: AHBClkDiv::NotDivided,
             audiopll: None,
