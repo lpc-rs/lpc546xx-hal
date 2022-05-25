@@ -8,10 +8,11 @@ use crate::pac::syscon::fclksel::SEL_A;
 
 use crate::pac::{
     FLEXCOMM0, FLEXCOMM1, FLEXCOMM2, FLEXCOMM3, FLEXCOMM4, FLEXCOMM5, FLEXCOMM6, FLEXCOMM7,
-    FLEXCOMM8, USART0, USART1, USART2, USART3, USART4, USART5, USART6, USART7, USART8,
+    FLEXCOMM8, I2C0, I2C1, I2C2, I2C3, I2C4, I2C5, I2C6, I2C7, I2C8, USART0, USART1, USART2,
+    USART3, USART4, USART5, USART6, USART7, USART8,
 };
 #[cfg(feature = "flexcomm-10")]
-use crate::pac::{FLEXCOMM9, USART9};
+use crate::pac::{FLEXCOMM9, I2C9, USART9};
 
 use crate::syscon::Syscon;
 
@@ -64,6 +65,41 @@ impl_flexcomm_as_usart!(
 #[cfg(feature = "flexcomm-10")]
 impl_flexcomm_as_usart!(
     FLEXCOMM9, USART9;
+);
+
+/// Trait for Flexcomm used as a I2C interface
+pub trait FlexCommAsI2C<I2C> {
+    /// Configure this Flexcomm as a I2C Interface
+    fn as_i2c(&self);
+}
+
+macro_rules! impl_flexcomm_as_i2c {
+    ($($FLEXCOMMX:ident, $I2CX:ident;)*) => {
+        $(
+            impl FlexCommAsI2C<$I2CX> for $FLEXCOMMX {
+                fn as_i2c(&self) {
+                    self.pselid.modify(|_, w| w.persel().i2c());
+                }
+            }
+        )*
+    }
+}
+
+impl_flexcomm_as_i2c!(
+    FLEXCOMM0, I2C0;
+    FLEXCOMM1, I2C1;
+    FLEXCOMM2, I2C2;
+    FLEXCOMM3, I2C3;
+    FLEXCOMM4, I2C4;
+    FLEXCOMM5, I2C5;
+    FLEXCOMM6, I2C6;
+    FLEXCOMM7, I2C7;
+    FLEXCOMM8, I2C8;
+);
+
+#[cfg(feature = "flexcomm-10")]
+impl_flexcomm_as_i2c!(
+    FLEXCOMM9, I2C9;
 );
 
 /// trait usefull for Specific Flexcomm implementation (USART, I2C, etc.)
