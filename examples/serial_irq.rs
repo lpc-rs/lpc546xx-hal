@@ -78,10 +78,9 @@ fn FLEXCOMM0() {
                         defmt::info!("received: {:a}", v); // -> INFO 97
                         serial.write(v).unwrap();
                     }
-                    Err(e) => defmt::info!(
-                        "error reading received char: {:?}",
-                        defmt::Debug2Format(&e)
-                    ),
+                    Err(e) => {
+                        defmt::info!("error reading received char: {:?}", defmt::Debug2Format(&e))
+                    }
                 }
             }
         }

@@ -37,7 +37,7 @@ fn main() -> ! {
     const MANUFACTURER: &str = "lpc546xx-hal";
     const PRODUCT: &str = "Usb Serial Example for lpc546xx-hal";
     const SERIAL_NUMBER: &str = "ACM CDC Serial";
-    
+
     // define serial enum
     let mut serial = SerialPort::new(&usb_bus);
     // start the enumeration
