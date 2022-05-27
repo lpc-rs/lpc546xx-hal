@@ -36,6 +36,9 @@ pub enum FlexcommClockSource {
 pub trait FlexCommAsUart<USART> {
     /// Configure this Flexcomm as an USART
     fn as_usart(&self);
+
+    /// checks if this Flexcomm is capable of being used as an USART
+    fn is_usart_capable(&self) -> bool;
 }
 
 macro_rules! impl_flexcomm_as_usart {
@@ -44,6 +47,9 @@ macro_rules! impl_flexcomm_as_usart {
             impl FlexCommAsUart<$USARTX> for $FLEXCOMMX {
                 fn as_usart(&self) {
                     self.pselid.modify(|_, w| w.persel().usart());
+                }
+                fn is_usart_capable(&self) -> bool {
+                    self.pselid.read().usartpresent().is_present()
                 }
             }
         )*
@@ -71,6 +77,9 @@ impl_flexcomm_as_usart!(
 pub trait FlexCommAsI2C<I2C> {
     /// Configure this Flexcomm as a I2C Interface
     fn as_i2c(&self);
+
+    /// checks if this Flexcomm is capable of being used as an I2C interface
+    fn is_i2c_capable(&self) -> bool ;
 }
 
 macro_rules! impl_flexcomm_as_i2c {
@@ -79,6 +88,9 @@ macro_rules! impl_flexcomm_as_i2c {
             impl FlexCommAsI2C<$I2CX> for $FLEXCOMMX {
                 fn as_i2c(&self) {
                     self.pselid.modify(|_, w| w.persel().i2c());
+                }
+                fn is_i2c_capable(&self) -> bool {
+                    self.pselid.read().i2cpresent().is_present()
                 }
             }
         )*

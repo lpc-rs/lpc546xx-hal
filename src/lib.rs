@@ -4,7 +4,7 @@
 #![cfg_attr(not(test), no_std)]
 #![allow(non_camel_case_types)]
 #![allow(clippy::upper_case_acronyms)]
-#![deny(missing_docs)]
+//#![deny(missing_docs)]
 
 use embedded_hal as hal;
 
@@ -27,6 +27,8 @@ pub use lpc546xx_pac::lpc54628 as pac;
 pub mod flexcomm;
 /// gpio module
 pub mod gpio;
+/// I2C peripheral, implements I2C trough the flexcomm peripherals
+pub mod i2c;
 /// prelude module
 /// this includes declaration for external peripheral for less verbose use
 pub mod prelude;
