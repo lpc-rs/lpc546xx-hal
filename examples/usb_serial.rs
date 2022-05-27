@@ -34,9 +34,9 @@ fn main() -> ! {
 
     const VID: u16 = 0x1FC9; // NXP VID for example
     const PID: u16 = 0x0094;
-    const MANUFACTURER: &'static str = "lpc546xx-hal";
-    const PRODUCT: &'static str = "Usb Serial Example for lpc546xx-hal";
-    const SERIAL_NUMBER: &'static str = "ACM CDC Serial";
+    const MANUFACTURER: &str = "lpc546xx-hal";
+    const PRODUCT: &str = "Usb Serial Example for lpc546xx-hal";
+    const SERIAL_NUMBER: &str = "ACM CDC Serial";
 
     // define serial enum
     let mut serial = SerialPort::new(&usb_bus);
