@@ -33,9 +33,9 @@ fn main() -> ! {
 
     const VID: u16 = 0x1FC9; // NXP VID for example
     const PID: u16 = 0x0094;
-    const MANUFACTURER: &'static str = "TestClass lpc546xx-hal";
-    const PRODUCT: &'static str = "TestClass Example";
-    const SERIAL_NUMBER: &'static str = "TestClass Serial";
+    const MANUFACTURER: &str = "TestClass lpc546xx-hal";
+    const PRODUCT: &str = "TestClass Example";
+    const SERIAL_NUMBER: &str = "TestClass Serial";
 
     // define test class
     let mut test = TestClass::new(&usb_bus);

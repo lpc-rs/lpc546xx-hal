@@ -45,7 +45,7 @@ fn main() -> ! {
                 block!(tx.write(x)).ok();
                 defmt::info!("received: {}", x);
             }
-            Err(_) => (),
+            Err(_) => defmt::error!("error"),
         }
     }
 }
