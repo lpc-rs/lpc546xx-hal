@@ -38,7 +38,7 @@ jobs:
           command: clippy
           # dummy feature to satisfy build.rs
           args: --features mcu-LPC54628J512ET180 -- -D warnings
-  clippy:
+  clippy-examples:
     name: Clippy examples
     runs-on: ubuntu-latest
     steps:
