@@ -16,7 +16,7 @@ fn main() -> ! {
     let mut syscon = dp.SYSCON.freeze(Config::fro12m());
 
     let gpio = dp.GPIO.split(&mut syscon, &mut iocon);
-    
+
     #[cfg(feature = "io-100")]
     let sda = gpio.pio0_26.into_open_drain_output();
     #[cfg(feature = "io-100")]
@@ -26,7 +26,7 @@ fn main() -> ! {
     let sda = gpio.pio3_23.into_open_drain_output();
     #[cfg(any(feature = "io-180", feature = "io-208"))]
     let scl = gpio.pio3_24.into_open_drain_output();
-    
+
     let mut i2c = dp
         .I2C2
         .i2c(dp.FLEXCOMM2, sda, scl, 100_000.Hz().into(), &mut syscon)
