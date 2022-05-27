@@ -18,3 +18,15 @@ pub use crate::serial::Serial7Ext as _;
 pub use crate::serial::Serial8Ext as _;
 #[cfg(feature = "flexcomm-10")]
 pub use crate::serial::Serial9Ext as _;
+
+pub use crate::i2c::I2c0Ext as _;
+pub use crate::i2c::I2c1Ext as _;
+pub use crate::i2c::I2c2Ext as _;
+pub use crate::i2c::I2c3Ext as _;
+pub use crate::i2c::I2c4Ext as _;
+pub use crate::i2c::I2c5Ext as _;
+pub use crate::i2c::I2c6Ext as _;
+pub use crate::i2c::I2c7Ext as _;
+pub use crate::i2c::I2c8Ext as _;
+#[cfg(feature = "flexcomm-10")]
+pub use crate::i2c::I2c9Ext as _;

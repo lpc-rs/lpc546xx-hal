@@ -27,6 +27,8 @@ pub use lpc546xx_pac::lpc54628 as pac;
 pub mod flexcomm;
 /// gpio module
 pub mod gpio;
+/// I2C peripheral, implements I2C trough the flexcomm peripherals
+pub mod i2c;
 /// prelude module
 /// this includes declaration for external peripheral for less verbose use
 pub mod prelude;
