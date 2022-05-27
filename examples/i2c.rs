@@ -26,11 +26,12 @@ fn main() -> ! {
         .unwrap();
 
     let mut buffer = [0x0D; 1]; // WHO_AM_I register
-    let mut content = [0u8;1];
+    let mut content = [0u8; 1];
     const MMA8652FCR1_ADDR: u8 = 0b0011101;
 
     loop {
-        i2c.write_read(MMA8652FCR1_ADDR, &mut buffer, &mut content).unwrap();
+        i2c.write_read(MMA8652FCR1_ADDR, &mut buffer, &mut content)
+            .unwrap();
         defmt::println!("WHO_AM_I: {:X}", content[0]);
         cortex_m::asm::delay(1_000_000);
     }

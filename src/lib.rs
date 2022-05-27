@@ -4,7 +4,7 @@
 #![cfg_attr(not(test), no_std)]
 #![allow(non_camel_case_types)]
 #![allow(clippy::upper_case_acronyms)]
-//#![deny(missing_docs)]
+#![deny(missing_docs)]
 
 use embedded_hal as hal;
 

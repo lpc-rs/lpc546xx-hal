@@ -79,7 +79,7 @@ pub trait FlexCommAsI2C<I2C> {
     fn as_i2c(&self);
 
     /// checks if this Flexcomm is capable of being used as an I2C interface
-    fn is_i2c_capable(&self) -> bool ;
+    fn is_i2c_capable(&self) -> bool;
 }
 
 macro_rules! impl_flexcomm_as_i2c {
