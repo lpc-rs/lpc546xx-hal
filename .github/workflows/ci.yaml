@@ -38,6 +38,23 @@ jobs:
           command: clippy
           # dummy feature to satisfy build.rs
           args: --features mcu-LPC54628J512ET180 -- -D warnings
+  clippy:
+    name: Clippy examples
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          components: clippy
+          target: thumbv7em-none-eabihf
+      - uses: actions-rs/cargo@v1
+        with:
+          use-cross: false
+          command: clippy
+          # dummy feature to satisfy build.rs
+          args: --examples --features mcu-LPC54628J512ET180 -- -D warnings
   package:
     name: Cargo package
     runs-on: ubuntu-latest
