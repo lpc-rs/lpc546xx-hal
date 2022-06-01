@@ -113,13 +113,58 @@ impl PinMode for Output<PushPull> {
     const OD: u8 = 0b0;
 }
 
-/// GPIO Pin speed selection
+/// GPIO Type D/I Invert function
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum Speed {
+pub enum InputInversion {
+    /// No Invert
+    NoInvert = 0,
+    /// Invert
+    Invert = 1,
+}
+
+/// GPIO Type D filter function
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum Filter {
+    /// Filter On
+    FilterOn = 0,
+    /// Filter Off
+    FilterOff = 1,
+}
+
+/// GPIO Type D speed selection
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum Slew {
     /// Standard Speed
     StandardSlew = 0,
-    /// Fast Speed (usefull for I2C)
+    /// Fast Speed 
     FastSlew = 1,
+}
+
+/// GPIO Type I I2CSlew control
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum I2CSlew {
+    /// Standard Speed
+    I2CMode = 0,
+    /// Fast Speed 
+    GPIOMode = 1,
+}
+
+/// GPIO Type I I2C Drive strength
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum SinkStrength {
+    /// 4 mA sink strength
+    Sink4mA = 0,
+    /// 20 mA sink strength
+    Sink20mA = 1,
+}
+
+/// GPIO Type I I2C Filter Off
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum I2CFilter {
+    /// Filter On
+    I2CFilterOn = 0,
+    /// Filter Off
+    I2CFilterOff = 1,
 }
 
 /// Pin Alternate function for peripheral IO
@@ -330,11 +375,21 @@ macro_rules! gpio_type_D {
             }
 
             /// Set pin speed.
-            pub fn set_speed(self, speed: Speed) -> Self {
+            pub fn set_slew(self, speed: Slew) -> Self {
                 unsafe {
                     &(*IOCON::ptr())
                         .$ioconpioX_Xreg
-                        .modify(|_, w| w.slew().bit(speed != Speed::StandardSlew))
+                        .modify(|_, w| w.slew().bit(speed != Slew::StandardSlew))
+                };
+                self
+            }
+
+            /// Set pin input inversion.
+            pub fn set_inversion(self, invert: InputInversion) -> Self {
+                unsafe {
+                    &(*IOCON::ptr())
+                        .$ioconpioX_Xreg
+                        .modify(|_, w| w.invert().bit(invert == InputInversion::Invert))
                 };
                 self
             }
@@ -610,6 +665,16 @@ macro_rules! gpio_type_A {
                 self.with_mode(f)
             }
 
+            /// Set pin input inversion.
+            pub fn set_inversion(self, invert: InputInversion) -> Self {
+                unsafe {
+                    &(*IOCON::ptr())
+                        .$ioconpioX_Xreg
+                        .modify(|_, w| w.invert().bit(invert == InputInversion::Invert))
+                };
+                self
+            }
+
             /// Set Pin alternative Mode
             #[allow(dead_code)]
             pub fn set_alt_mode(&self, mode: AltMode) {
@@ -878,6 +943,7 @@ macro_rules! gpio_type_I {
             }
 
             /// Set pin speed.
+            //pub fn set_i2c_speed(self, speed: )
             /// TODO: implement i2c speeds
             /*pub fn set_i2c_speed(self, speed: Speed) -> Self {
                 unsafe {
@@ -887,6 +953,16 @@ macro_rules! gpio_type_I {
                 };
                 self
             }*/
+
+            /// Set pin input inversion.
+            pub fn set_inversion(self, invert: InputInversion) -> Self {
+                unsafe {
+                    &(*IOCON::ptr())
+                        .$ioconpioX_Xreg
+                        .modify(|_, w| w.invert().bit(invert == InputInversion::Invert))
+                };
+                self
+            }
 
             /// Set Pin alternative Mode
             #[allow(dead_code)]
@@ -1009,7 +1085,7 @@ macro_rules! gpio {
 
             use super::{
                 AltMode, Analog, Floating, GpioExt, Input, OpenDrain, Output, PinMode, Port, PullDown,
-                PullUp, PushPull, Speed,
+                PullUp, PushPull, Slew, InputInversion
             };
             use crate::hal::digital::v2::{toggleable, InputPin, OutputPin, StatefulOutputPin};
             use crate::pac::{self, GPIO, IOCON};
