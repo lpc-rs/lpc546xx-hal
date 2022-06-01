@@ -11,7 +11,7 @@ use lpc546xx_hal::{
     self as _,
     gpio::{
         gpio::{Pin, P3_27},
-        Floating, Input
+        Floating, Input,
     },
 };
 use panic_probe as _;
@@ -25,7 +25,7 @@ struct State {
 mod tests {
     use cortex_m::asm;
     use defmt::{assert, unwrap};
-    use lpc546xx_hal::{pac, prelude::*, syscon::Config, gpio::InputInversion}; // the HAL we'll test
+    use lpc546xx_hal::{pac, prelude::*, syscon::Config}; // the HAL we'll test
 
     use super::State;
 
@@ -36,7 +36,7 @@ mod tests {
         let mut syscon = dp.SYSCON.freeze(Config::fro12m());
         let gpio = dp.GPIO.split(&mut syscon, &mut iocon);
 
-        let input_pin = gpio.pio3_26.into_floating_input().set_inversion(InputInversion::Invert).downgrade();
+        let input_pin = gpio.pio3_26.into_floating_input().invert().downgrade();
         let puller_pin = Some(gpio.pio3_27.into_floating_input());
 
         State {

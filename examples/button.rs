@@ -4,7 +4,7 @@
 use cortex_m_rt::entry;
 
 use defmt_rtt as _;
-use lpc546xx_hal::{pac, prelude::*, syscon::Config, gpio::InputInversion};
+use lpc546xx_hal::{pac, prelude::*, syscon::Config};
 use panic_probe as _;
 #[entry]
 fn main() -> ! {

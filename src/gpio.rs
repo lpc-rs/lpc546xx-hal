@@ -113,15 +113,6 @@ impl PinMode for Output<PushPull> {
     const OD: u8 = 0b0;
 }
 
-/// GPIO Type D/I Invert function
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum InputInversion {
-    /// No Invert
-    NoInvert = 0,
-    /// Invert
-    Invert = 1,
-}
-
 /// GPIO Type D filter function
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Filter {
@@ -136,7 +127,7 @@ pub enum Filter {
 pub enum Slew {
     /// Standard Speed
     StandardSlew = 0,
-    /// Fast Speed 
+    /// Fast Speed
     FastSlew = 1,
 }
 
@@ -145,7 +136,7 @@ pub enum Slew {
 pub enum I2CSlew {
     /// Standard Speed
     I2CMode = 0,
-    /// Fast Speed 
+    /// Fast Speed
     GPIOMode = 1,
 }
 
@@ -384,16 +375,6 @@ macro_rules! gpio_type_D {
                 self
             }
 
-            /// Set pin input inversion.
-            pub fn set_inversion(self, invert: InputInversion) -> Self {
-                unsafe {
-                    &(*IOCON::ptr())
-                        .$ioconpioX_Xreg
-                        .modify(|_, w| w.invert().bit(invert == InputInversion::Invert))
-                };
-                self
-            }
-
             /// Set Pin alternative Mode
             #[allow(dead_code)]
             pub fn set_alt_mode(&self, mode: AltMode) {
@@ -478,6 +459,16 @@ macro_rules! gpio_type_D {
                     port_number: $Portn,
                     _mode: self._mode,
                 }
+            }
+
+            /// Set pin input inversion.
+            pub fn invert(self) -> Self {
+                unsafe {
+                    &(*IOCON::ptr())
+                        .$ioconpioX_Xreg
+                        .modify(|_, w| w.invert().enabled())
+                };
+                self
             }
         }
         impl<MODE> InputPin for $PX_X<Input<MODE>> {
@@ -665,16 +656,6 @@ macro_rules! gpio_type_A {
                 self.with_mode(f)
             }
 
-            /// Set pin input inversion.
-            pub fn set_inversion(self, invert: InputInversion) -> Self {
-                unsafe {
-                    &(*IOCON::ptr())
-                        .$ioconpioX_Xreg
-                        .modify(|_, w| w.invert().bit(invert == InputInversion::Invert))
-                };
-                self
-            }
-
             /// Set Pin alternative Mode
             #[allow(dead_code)]
             pub fn set_alt_mode(&self, mode: AltMode) {
@@ -759,6 +740,16 @@ macro_rules! gpio_type_A {
                     port_number: $Portn,
                     _mode: self._mode,
                 }
+            }
+
+            /// Set pin input inversion.
+            pub fn invert(self) -> Self {
+                unsafe {
+                    &(*IOCON::ptr())
+                        .$ioconpioX_Xreg
+                        .modify(|_, w| w.invert().enabled())
+                };
+                self
             }
         }
         impl<MODE> InputPin for $PX_X<Input<MODE>> {
@@ -954,16 +945,6 @@ macro_rules! gpio_type_I {
                 self
             }*/
 
-            /// Set pin input inversion.
-            pub fn set_inversion(self, invert: InputInversion) -> Self {
-                unsafe {
-                    &(*IOCON::ptr())
-                        .$ioconpioX_Xreg
-                        .modify(|_, w| w.invert().bit(invert == InputInversion::Invert))
-                };
-                self
-            }
-
             /// Set Pin alternative Mode
             #[allow(dead_code)]
             pub fn set_alt_mode(&self, mode: AltMode) {
@@ -1049,6 +1030,16 @@ macro_rules! gpio_type_I {
                     _mode: self._mode,
                 }
             }
+
+            /// Set pin input inversion.
+            pub fn invert(self) -> Self {
+                unsafe {
+                    &(*IOCON::ptr())
+                        .$ioconpioX_Xreg
+                        .modify(|_, w| w.invert().enabled())
+                };
+                self
+            }
         }
         impl<MODE> InputPin for $PX_X<Input<MODE>> {
             type Error = void::Void;
@@ -1085,7 +1076,7 @@ macro_rules! gpio {
 
             use super::{
                 AltMode, Analog, Floating, GpioExt, Input, OpenDrain, Output, PinMode, Port, PullDown,
-                PullUp, PushPull, Slew, InputInversion
+                PullUp, PushPull, Slew
             };
             use crate::hal::digital::v2::{toggleable, InputPin, OutputPin, StatefulOutputPin};
             use crate::pac::{self, GPIO, IOCON};
