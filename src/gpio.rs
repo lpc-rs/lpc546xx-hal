@@ -113,15 +113,6 @@ impl PinMode for Output<PushPull> {
     const OD: u8 = 0b0;
 }
 
-/// GPIO Type D filter function
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum Filter {
-    /// Filter On
-    FilterOn = 0,
-    /// Filter Off
-    FilterOff = 1,
-}
-
 /// GPIO Type D speed selection
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Slew {
@@ -133,7 +124,7 @@ pub enum Slew {
 
 /// GPIO Type I I2CSlew control
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum I2CSlew {
+pub enum I2CSlewRate {
     /// Standard Speed
     I2CMode = 0,
     /// Fast Speed
@@ -751,6 +742,28 @@ macro_rules! gpio_type_A {
                 };
                 self
             }
+
+            /// Enable pin filter.
+            /// Noise pulses below approximately 10 ns are filtered out.
+            pub fn enable_filter(self) -> Self {
+                unsafe {
+                    &(*IOCON::ptr())
+                        .$ioconpioX_Xreg
+                        .modify(|_, w| w.filteroff().enabled())
+                };
+                self
+            }
+
+            /// Disable pin filter.
+            /// No input filtering is done.
+            pub fn disable_filter(self) -> Self {
+                unsafe {
+                    &(*IOCON::ptr())
+                        .$ioconpioX_Xreg
+                        .modify(|_, w| w.filteroff().disabled())
+                };
+                self
+            }
         }
         impl<MODE> InputPin for $PX_X<Input<MODE>> {
             type Error = void::Void;
@@ -933,17 +946,37 @@ macro_rules! gpio_type_I {
                 self.with_mode(f)
             }
 
-            /// Set pin speed.
-            //pub fn set_i2c_speed(self, speed: )
-            /// TODO: implement i2c speeds
-            /*pub fn set_i2c_speed(self, speed: Speed) -> Self {
+            // TODO: add tests
+            /// Set i2c pin speed.
+            pub fn set_i2c_slewrate(self, slew: I2CSlewRate) -> Self {
                 unsafe {
                     &(*IOCON::ptr())
                         .$ioconpioX_Xreg
-                        .modify(|_, w| w.slew().bit(speed != Speed::StandardSlew))
+                        .modify(|_, w| w.i2cslew().bit(slew != I2CSlewRate::I2CMode))
                 };
                 self
-            }*/
+            }
+
+            // TODO: add tests
+            /// Set i2c pin sink strength.
+            pub fn set_i2c_sink_strength(self, sink_strength: SinkStrength) -> Self {
+                unsafe {
+                    &(*IOCON::ptr())
+                        .$ioconpioX_Xreg
+                        .modify(|_, w| w.i2cdrive().bit(sink_strength == SinkStrength::Sink20mA))
+                };
+                self
+            }
+
+            /// Set i2c filter
+            pub fn set_i2c_filter(self, filter: I2CFilter) -> Self {
+                unsafe {
+                    &(*IOCON::ptr())
+                        .$ioconpioX_Xreg
+                        .modify(|_, w| w.i2cfilter().bit(filter == I2CFilter::I2CFilterOff))
+                };
+                self
+            }
 
             /// Set Pin alternative Mode
             #[allow(dead_code)]
@@ -1076,7 +1109,7 @@ macro_rules! gpio {
 
             use super::{
                 AltMode, Analog, Floating, GpioExt, Input, OpenDrain, Output, PinMode, Port, PullDown,
-                PullUp, PushPull, Slew
+                PullUp, PushPull, Slew, I2CSlewRate, SinkStrength, I2CFilter
             };
             use crate::hal::digital::v2::{toggleable, InputPin, OutputPin, StatefulOutputPin};
             use crate::pac::{self, GPIO, IOCON};
