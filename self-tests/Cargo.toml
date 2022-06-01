@@ -11,6 +11,10 @@ name = "gpio-input-floating"
 harness = false # don't use the standard harness (`test` crate)
 
 [[test]]
+name = "gpio-input-inverted"
+harness = false # don't use the standard harness (`test` crate)
+
+[[test]]
 name = "gpio-input-pulled"
 harness = false
 
