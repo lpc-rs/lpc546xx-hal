@@ -701,7 +701,7 @@ impl hal::serial::Write<u8> for Tx<$UARTX> {
         let fifostat = unsafe { (*$UARTX::ptr()).fifostat.read() };
 
         // check if there is space left in the tx fifo
-        if fifostat.txnotfull().bits() {
+        if fifostat.txnotfull().bit() {
             // NOTE(unsafe) atomic write to stateless register
             unsafe {
                 (*$UARTX::ptr())

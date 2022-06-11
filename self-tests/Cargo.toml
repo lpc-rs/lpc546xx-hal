@@ -31,6 +31,10 @@ name = "clocking-api"
 harness = false
 
 [[test]]
+name = "crc"
+harness = false
+
+[[test]]
 name = "serial-api-loopback"
 harness = false
 required-features = ["lpc546xx-hal/flexcomm-10", "local-flexcomm-10"]

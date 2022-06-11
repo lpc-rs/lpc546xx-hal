@@ -438,7 +438,13 @@ macro_rules! impl_clock_control {
 // impl_clock_control!(CTIMER2, timer2, ahbclkctrl1);
 // impl_clock_control!(CTIMER3, timer3, ahbclkctrl2);
 // impl_clock_control!(CTIMER4, timer4, ahbclkctrl2);
-// impl_clock_control!(DMA0, dma0, ahbclkctrl0);
+impl_clock_control!(CRC_ENGINE, crc, ahbclkctrl0, crc_get_clock_freq);
+
+// the CRC engine runs at AHB bus speed (system clock)
+fn crc_get_clock_freq(s: &Syscon) -> Option<Hertz> {
+    s.get_system_clock_clock_freq()
+}
+
 impl_clock_control!(
     FLEXCOMM0,
     flexcomm0,
