@@ -36,6 +36,13 @@ fn main() -> ! {
     let mut content = [0u8; 1];
     const MMA8652FCR1_ADDR: u8 = 0b0011101;
 
+    for addr in 0x00_u8..0x80 {
+        // Write the empty array and check the slave response.
+        if i2c.write_read(addr, &buffer, &mut content).is_ok() {
+            defmt::println!("device present at {:02x}", addr);
+        }
+    }
+
     loop {
         i2c.write_read(MMA8652FCR1_ADDR, &buffer, &mut content)
             .unwrap();
