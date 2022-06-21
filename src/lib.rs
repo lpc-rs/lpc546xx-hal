@@ -32,6 +32,8 @@ pub mod i2c;
 /// prelude module
 /// this includes declaration for external peripheral for less verbose use
 pub mod prelude;
+/// rtc module
+pub mod rtc;
 /// serial peripheral, implements USART trough the flexcomm peripherals
 pub mod serial;
 /// System confifuration module (clocks & flash)
