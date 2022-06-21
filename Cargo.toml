@@ -26,7 +26,7 @@ cortex-m-rt = "0.7.0"
 embedded-hal = {version = "0.2.6", features = ["unproven"]}
 embedded-time = "0.12.1"
 nb = "1.0.0"
-lpc546xx-pac = "0.2.1" # edit once the pac is release with the correct version
+lpc546xx-pac = "0.2.1"
 void = { version = "1.0.2", default-features = false }
 lpc-usbd = "0.1.0"
 usb-device = "0.2.8"
