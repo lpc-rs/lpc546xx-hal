@@ -1,8 +1,5 @@
 //! Flexible Communication Interface
 //!
-//!
-//!
-//!
 
 use crate::pac::syscon::fclksel::SEL_A;
 

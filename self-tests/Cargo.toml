@@ -9,6 +9,10 @@ name = "clocking-api"
 harness = false
 
 [[test]]
+name = "crc"
+harness = false
+
+[[test]]
 name = "gpio-input-floating"
 harness = false 
 

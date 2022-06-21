@@ -23,6 +23,8 @@ pub use lpc546xx_pac::lpc54618 as pac;
 #[cfg(feature = "lpc54628")]
 pub use lpc546xx_pac::lpc54628 as pac;
 
+/// CRC engine
+pub mod crc;
 /// flexcomm module
 pub mod flexcomm;
 /// gpio module
