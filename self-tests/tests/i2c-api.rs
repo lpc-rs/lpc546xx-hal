@@ -3,7 +3,7 @@
 
 use defmt_rtt as _; // transport layer for defmt logs
 use lpc546xx_hal::{
-    self as _, gpio,
+    self as _,
     i2c::I2c,
     pac::{FLEXCOMM2, I2C2},
 };
@@ -29,7 +29,7 @@ mod tests {
         let sda = gpio.pio3_23.into_open_drain_output();
         let scl = gpio.pio3_24.into_open_drain_output();
 
-        let mut i2c = dp
+        let i2c = dp
             .I2C2
             .i2c(dp.FLEXCOMM2, sda, scl, 100_000.Hz().into(), &mut syscon)
             .unwrap();
