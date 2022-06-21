@@ -516,7 +516,11 @@ impl_clock_control!(IOCON, iocon, ahbclkctrl0, main_clock_get_source_clock);
 // impl_clock_control!(USBHSH, usb1_host, ahbclkctrl2);
 // impl_clock_control!(UTICK0, utick, ahbclkctrl1);
 
-// impl_clock_control!(RTC, rtc, ahbclkctrl0);
+impl_clock_control!(RTC, rtc, ahbclkctrl0, rtc_get_source_clock);
+
+fn rtc_get_source_clock(s: &Syscon) -> Option<Hertz> {
+    s.get_clk_32k_clock_freq()
+}
 
 /// General system clock
 fn main_clock_get_source_clock(s: &Syscon) -> Option<Hertz> {

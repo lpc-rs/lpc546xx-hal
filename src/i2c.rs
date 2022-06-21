@@ -381,11 +381,13 @@ impl I2c<$I2CX, $FLEXCOMMX> {
         })
     }
 
-    fn return_on_error(&self) -> Result<(), self::Error> {
+    fn return_on_error(&mut self) -> Result<(), self::Error> {
         if self.i2c.stat.read().mststate().is_nack_data() {
+            self.stop()?;
             return Err(Error::Nak);
         }
         if self.i2c.stat.read().mststate().is_nack_address() {
+            self.stop()?;
             return Err(Error::AddrNak);
         }
         if self.i2c.stat.read().mstarbloss().is_arbitration_loss() {

@@ -4,15 +4,21 @@ name = "lpc546xx-hal-tests"
 publish = false
 version = "0.0.0"
 
-# NOTE `[[test]].harness` is required for *each*
-# file in `tests/*.rs
+[[test]]
+name = "clocking-api"
+harness = false
+
+[[test]]
+name = "crc"
+harness = false
+
 [[test]]
 name = "gpio-input-floating"
-harness = false # don't use the standard harness (`test` crate)
+harness = false 
 
 [[test]]
 name = "gpio-input-inverted"
-harness = false # don't use the standard harness (`test` crate)
+harness = false
 
 [[test]]
 name = "gpio-input-pulled"
@@ -27,20 +33,15 @@ name = "gpio-output-push-pull"
 harness = false
 
 [[test]]
-name = "clocking-api"
+name = "i2c-api"
 harness = false
 
 [[test]]
-name = "crc"
+name = "rtc-api"
 harness = false
 
 [[test]]
 name = "serial-api-loopback"
-harness = false
-required-features = ["lpc546xx-hal/flexcomm-10", "local-flexcomm-10"]
-
-[[test]]
-name = "serial-api-wire"
 harness = false
 required-features = ["lpc546xx-hal/flexcomm-10", "local-flexcomm-10"]
 
@@ -50,12 +51,28 @@ harness = false
 required-features = ["lpc546xx-hal/flexcomm-10", "local-flexcomm-10"]
 
 [[test]]
-name = "i2c-api"
+name = "serial-api-wire"
 harness = false
+required-features = ["lpc546xx-hal/flexcomm-10", "local-flexcomm-10"]
+
+[[test]]
+name = "serial-api-loopback"
+harness = false
+required-features = ["lpc546xx-hal/flexcomm-10", "local-flexcomm-10"]
+
+[[test]]
+name = "serial-api-wire-event"
+harness = false
+required-features = ["lpc546xx-hal/flexcomm-10", "local-flexcomm-10"]
+
+[[test]]
+name = "serial-api-wire"
+harness = false
+required-features = ["lpc546xx-hal/flexcomm-10", "local-flexcomm-10"]
 
 [dev-dependencies]
-defmt = "0.3.0"
-defmt-rtt = "0.3.1"
+defmt = "0.3.2"
+defmt-rtt = "0.3.2"
 defmt-test = "0.3.0"
 void = { version = "1.0.2", default-features = false }
 cortex-m = "0.7.3"
