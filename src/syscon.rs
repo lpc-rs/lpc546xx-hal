@@ -13,6 +13,21 @@
 use crate::pac::*;
 use embedded_time::rate::{Extensions, Hertz};
 
+/// possible syscon conf errors
+#[derive(Debug, PartialEq, Eq)]
+pub enum SysconConfError {
+    /// The Pll output desired is too high
+    PllOutputTooHigh,
+    /// The Pll output desired is too low
+    PllOutputTooLow,
+    /// The Pll Input is too low
+    PllInputTooLow,
+    /// The Pll is Outside Int Limit
+    PllOutsideIntLimit,
+    /// The Pll has no input clock
+    PllInputNotSelected,
+}
+
 /// System clock mux source
 #[derive(Clone, Copy)]
 pub enum MainClkSelA {
@@ -175,7 +190,32 @@ impl Syscon {
 
     /// Get audio pll clock frequency
     pub fn get_audio_pll_clk_clock_freq(&self) -> Option<Hertz> {
-        self.clocks.audio_pll
+        let pll_source = match self.rb.audpllclksel.read().sel().variant().unwrap() {
+            syscon::audpllclksel::SEL_A::CLKIN => self.get_clock_xtal_in_freq(),
+            syscon::audpllclksel::SEL_A::FRO_12_MHZ => self.get_fro_12m_clock_freq(),
+            syscon::audpllclksel::SEL_A::NONE => return None,
+        }?;
+
+        let ndiv_pre = pll_decode_n(self.rb.audpllndec.read().ndec().bits() as u32);
+        let mmult = pll_decode_m(self.rb.audpllmdec.read().mdec().bits() as u32);
+        let pdiv_post = pll_decode_p(self.rb.audpllpdec.read().pdec().bits() as u32);
+
+        let directi = self.rb.audpllctrl.read().directi().bit();
+        let directo = self.rb.audpllctrl.read().directo().bit();
+        let bypass = self.rb.audpllctrl.read().bypass().bit();
+
+        let fref = match directi {
+            true => pll_source,
+            false => pll_source / ndiv_pre,
+        };
+
+        let fout_cco = fref * mmult * 2;
+        let pll_out = match (directo, bypass) {
+            (true, _) => fout_cco,
+            (false, true) => pll_source,
+            (false, false) => fout_cco / pdiv_post / 2,
+        };
+        Some(pll_out)
     }
 
     /// Get Mclk frequency (user supplied)
@@ -335,6 +375,194 @@ impl Syscon {
             core::ptr::write_volatile(0x4002_0010 as *mut u32, 0xb);
             core::ptr::write_volatile(0x4002_0014 as *mut u32, 0xb);
         }
+    }
+
+    /// Power Library API to power the PLLs.
+    /// reverse engineered from libpower.a
+    fn power_set_pll(&mut self) {
+        unsafe {
+            core::ptr::write_volatile(0x4000_0630 as *mut i32, 0x0400_0000);
+            while -1 < (core::ptr::read_volatile(0x4002_0054 as *mut i32) << 0x1a) {}
+        }
+    }
+
+    ///  Power Library API to power the USB PHY (for usb HS0).
+    #[allow(dead_code)]
+    fn power_set_usb_phy(&mut self) {
+        unsafe {
+            core::ptr::write_volatile(0x4000_0630 as *mut i32, 0x1000_0000);
+            while -1 < (core::ptr::read_volatile(0x4002_0054 as *mut i32) << 0x16) {}
+        }
+    }
+
+    /// try to configure the PLL to the given frequency.
+    /// Returns the actual frequency.
+    pub fn try_audio_pll_config(
+        &mut self,
+        target_freq: Hertz,
+    ) -> Result<Option<Hertz>, SysconConfError> {
+        // get audio pll input frequency
+        let input_freq = match self.rb.audpllclksel.read().sel().variant() {
+            Some(sel) => match sel {
+                syscon::audpllclksel::SEL_A::FRO_12_MHZ => 12_000_000.Hz(),
+                syscon::audpllclksel::SEL_A::CLKIN => todo!(),
+                syscon::audpllclksel::SEL_A::NONE => {
+                    return Err(SysconConfError::PllInputNotSelected)
+                }
+            },
+            None => todo!(),
+        };
+
+        let mut pll_pre_divider: u32 = 1;
+        let mut pll_post_divider: u32 = 0;
+        let mut pll_direct_output: bool = true;
+        let mult_fcco_div: u32 = 2;
+
+        if target_freq > 550_000_000.Hz() {
+            return Err(SysconConfError::PllOutputTooHigh);
+        }
+        if target_freq.0 < (275_000_000 / 0x20) << 1 {
+            return Err(SysconConfError::PllOutputTooLow);
+        }
+
+        if input_freq < (4_000.Hz()) {
+            return Err(SysconConfError::PllInputTooLow);
+        }
+
+        let mut fcco_hz = target_freq;
+        while fcco_hz.0 < 275_000_000 {
+            pll_post_divider += 1;
+            if pll_post_divider > 0x20 {
+                return Err(SysconConfError::PllOutsideIntLimit);
+            }
+            // target CCO goes up, PLL output goes down
+            fcco_hz = target_freq * (pll_post_divider * 2);
+            pll_direct_output = false;
+        }
+        // determine if a pre-divider is needed to get the best frequency
+        if input_freq > 4_000.Hz() && fcco_hz >= input_freq {
+            let mut a = greatest_common_divisor(fcco_hz.0, mult_fcco_div * input_freq.0);
+            if a > 20_000 {
+                a = (mult_fcco_div * input_freq.0) / a;
+                if a != 0 && a < 0x100 {
+                    pll_pre_divider = a;
+                }
+            }
+        }
+
+        // bypass predivider hardware if pre divider is 1
+        let pll_direct_input = pll_pre_divider <= 1;
+
+        let ndiv_out_hz = input_freq / pll_pre_divider;
+        let mut pll_multiplier = (fcco_hz.0 / ndiv_out_hz.0) / mult_fcco_div;
+
+        // find optimal values for filter
+        // will bumping up M by 1 get us closer to the desired CCO frequency?
+        if (ndiv_out_hz.0 * ((mult_fcco_div * pll_multiplier * 2) + 1)) < (fcco_hz.0 * 2) {
+            pll_multiplier += 1;
+        }
+
+        // setup filtering
+        let (selp, seli, selr) = pll_find_sel(pll_multiplier);
+        let mdec = pll_encode_m(pll_multiplier) & 0x1_FFFF;
+        let ndec = pll_encode_n(pll_pre_divider) as u16 & 0x3FF;
+        let pdec = pll_encode_p(pll_post_divider) as u8 & 0x7F;
+
+        // check if clkin is the input, and enable it if it is
+        match self.rb.audpllclksel.read().sel().variant() {
+            Some(x) => match x {
+                syscon::audpllclksel::SEL_A::FRO_12_MHZ => (),
+                syscon::audpllclksel::SEL_A::CLKIN => {
+                    // enable sysosc
+                    self.rb.pdruncfgclr0.write(|w| w.pden_vd2_ana().set_bit());
+                    self.rb.pdruncfgclr1.write(|w| w.pden_sysosc().set_bit());
+                }
+                syscon::audpllclksel::SEL_A::NONE => {
+                    return Err(SysconConfError::PllInputNotSelected)
+                }
+            },
+            None => return Err(SysconConfError::PllInputNotSelected),
+        }
+        self.power_set_pll();
+        // power off PLL during setup changes
+        self.rb.pdruncfgset1.write(|w| w.pden_aud_pll().set_bit());
+
+        // pll control
+        self.rb.audpllctrl.write(|w| unsafe {
+            w.selr()
+                .bits(selr as u8)
+                .seli()
+                .bits(seli as u8)
+                .selp()
+                .bits(selp as u8)
+                .bypass()
+                .clear_bit()
+                .uplimoff()
+                .bit(false)
+                .directi()
+                .bit(pll_direct_input)
+                .directo()
+                .bit(pll_direct_output)
+        });
+
+        self.rb.audpllndec.write(|w| unsafe { w.ndec().bits(ndec) });
+        self.rb
+            .audpllndec
+            .write(|w| unsafe { w.ndec().bits(ndec) }.nreq().set_bit());
+        self.rb.audpllpdec.write(|w| unsafe { w.pdec().bits(pdec) });
+        self.rb
+            .audpllpdec
+            .write(|w| unsafe { w.pdec().bits(pdec) }.preq().set_bit());
+        self.rb.audpllmdec.write(|w| unsafe { w.mdec().bits(mdec) });
+        self.rb
+            .audpllmdec
+            .write(|w| unsafe { w.mdec().bits(mdec) }.mreq().set_bit());
+        self.rb.audpllfrac.write(|w| w.sel_ext().set_bit());
+
+        // run pll and lock
+        let max_cco: u32 = (1 << 18) | 0x5dd2;
+        let cur_ssctrl = self.rb.audpllmdec.read().mdec().bits();
+        self.rb.audpllmdec.write(|w| unsafe { w.bits(max_cco) });
+        self.rb.pdruncfgclr1.write(|w| w.pden_aud_pll().set_bit());
+        self.rb
+            .audpllmdec
+            .write(|w| unsafe { w.bits(max_cco | (1 << 17)) });
+        cortex_m::asm::delay(864); // at least 72 usec at 12MHz
+        self.rb.audpllmdec.write(|w| unsafe { w.bits(cur_ssctrl) });
+        self.rb
+            .audpllmdec
+            .write(|w| unsafe { w.bits(cur_ssctrl | (1 << 17)) });
+        self.rb.pdruncfgclr1.write(|w| w.pden_aud_pll().set_bit());
+
+        // wait for pll lock
+        while self.rb.audpllstat.read().lock().bit_is_clear() {
+            continue;
+        }
+
+        Ok(self.get_audio_pll_clk_clock_freq())
+    }
+
+    /// Attatch the audio PLL to the MCLK block
+    pub fn attach_audio_pll_to_mclk(&mut self) {
+        self.rb.mclkclksel.write(|w| w.sel().audio_pll_output());
+    }
+
+    /// Configure the MCLK divider
+    pub fn set_mclk_divider(&mut self, divider: u8) {
+        assert!(divider > 0);
+        self.rb
+            .mclkdiv
+            .write(|w| unsafe { w.div().bits(divider - 1) });
+    }
+
+    /// Enable the MCLK divider (wont run if disabled)
+    pub fn enable_mclk_divider(&mut self) {
+        self.rb.mclkdiv.modify(|_, w| w.halt().clear_bit());
+    }
+
+    /// Connect the MCLK block to the MCLK io path (still need to be selected in the IOCON)
+    pub fn set_mclk_io_as_output(&mut self, dir: bool) {
+        self.rb.mclkio.write(|w| w.dir().bit(dir));
     }
 }
 /// The main API for the SYSCON peripheral
@@ -651,6 +879,16 @@ impl ResetControl for GPIO {
     }
 }
 
+impl ResetControl for FLEXCOMM6 {
+    fn assert_reset(&self, syscon: &mut Syscon) {
+        syscon.rb.presetctrl1.modify(|_, w| w.fc6_rst().set_bit())
+    }
+
+    fn clear_reset(&self, syscon: &mut Syscon) {
+        syscon.rb.presetctrl1.modify(|_, w| w.fc6_rst().clear_bit())
+    }
+}
+
 /// Extension trait that freezes the `SYSCON` peripheral with provided clocks configuration
 pub trait SysconExt {
     /// Freeze device clock tree according to config
@@ -752,34 +990,6 @@ impl SysconExt for SYSCON {
                 .modify(|_, w| w.sel().rtc_osc_output()),
         }
 
-        if let Some(config) = cfgr.audiopll {
-            match config.clksel {
-                AudioPllClkSel::clk_in => syscon.rb.audpllclksel.modify(|_, w| w.sel().clkin()),
-                AudioPllClkSel::fro_12m => {
-                    syscon.rb.audpllclksel.modify(|_, w| w.sel().fro_12_mhz())
-                }
-                AudioPllClkSel::none => syscon.rb.audpllclksel.modify(|_, w| w.sel().none()),
-            }
-            syscon
-                .rb
-                .audpllndec
-                .write(|w| unsafe { w.ndec().bits(config.ndec) });
-            syscon.rb.audpllndec.modify(|_, w| w.nreq().set_bit());
-
-            syscon
-                .rb
-                .audpllpdec
-                .write(|w| unsafe { w.pdec().bits(config.pdec) });
-            syscon.rb.audpllpdec.modify(|_, w| w.preq().set_bit());
-
-            syscon
-                .rb
-                .audpllmdec
-                .write(|w| unsafe { w.mdec().bits(config.mdec) });
-            syscon.rb.audpllmdec.modify(|_, w| w.mreq().set_bit());
-            syscon.clocks.audio_pll = Some(config.pllrate)
-        }
-
         let ahbdivider = match cfgr.ahbclkdiv {
             AHBClkDiv::NotDivided => 1,
             AHBClkDiv::DividedBy(x) => x,
@@ -823,8 +1033,6 @@ pub struct Config {
     pub mainclkselb: MainClkSelB,
     /// ahb Clock divider
     pub ahbclkdiv: AHBClkDiv,
-    /// audio pll configuration
-    pub audiopll: Option<AudioPllConfig>,
     /// mclk input freq
     pub mclkin: Option<Hertz>,
 }
@@ -841,7 +1049,6 @@ impl Default for Config {
             mainclksela: MainClkSelA::fro_12m,
             mainclkselb: MainClkSelB::mainclka,
             ahbclkdiv: AHBClkDiv::NotDivided,
-            audiopll: None,
             mclkin: None,
         }
     }
@@ -857,7 +1064,6 @@ impl Config {
             mainclksela: MainClkSelA::fro_12m,
             mainclkselb: MainClkSelB::mainclka,
             ahbclkdiv: AHBClkDiv::NotDivided,
-            audiopll: None,
             mclkin: None,
         }
     }
@@ -870,7 +1076,6 @@ impl Config {
             mainclksela: MainClkSelA::clk_in,
             mainclkselb: MainClkSelB::mainclka,
             ahbclkdiv: AHBClkDiv::NotDivided,
-            audiopll: None,
             mclkin: None,
         }
     }
@@ -883,7 +1088,6 @@ impl Config {
             mainclksela: MainClkSelA::fro_hf(FroHfOsc::Fro48Mhz),
             mainclkselb: MainClkSelB::mainclka,
             ahbclkdiv: AHBClkDiv::NotDivided,
-            audiopll: None,
             mclkin: None,
         }
     }
@@ -896,8 +1100,160 @@ impl Config {
             mainclksela: MainClkSelA::fro_hf(FroHfOsc::Fro96Mhz),
             mainclkselb: MainClkSelB::mainclka,
             ahbclkdiv: AHBClkDiv::NotDivided,
-            audiopll: None,
             mclkin: None,
         }
     }
+}
+
+fn pll_encode_m(m: u32) -> u32 {
+    let mut x: u32;
+    match m {
+        0 => x = 0x1FFFF,
+        1 => x = 0x18003,
+        2 => x = 0x10003,
+        _ => {
+            x = 0x04000;
+            for _ in m..=0x8000 {
+                x = (((x ^ (x >> 1)) & 1) << 14) | ((x >> 1) & 0x3FFF);
+            }
+        }
+    }
+    x & 0x1FFFF
+}
+fn pll_decode_m(mdec: u32) -> u32 {
+    let mut m: u32;
+    let mut x: u32;
+    match mdec {
+        0x1FFFF => m = 0,
+        0x18003 => m = 1,
+        0x10003 => m = 2,
+        _ => {
+            x = 0x04000;
+            m = 0xFFFF_FFFF;
+            for i in (3..=0x8000).rev() {
+                if m != 0xFFFF_FFFF {
+                    break;
+                }
+                x = (((x ^ (x >> 1)) & 1) << 14) | ((x >> 1) & 0x3FFF);
+                if (x & 0x1FFFF) == mdec {
+                    m = i;
+                }
+            }
+        }
+    }
+    m
+}
+fn pll_encode_n(n: u32) -> u32 {
+    let mut x: u32;
+    match n {
+        0 => x = 0x3FF,
+        1 => x = 0x302,
+        2 => x = 0x202,
+        _ => {
+            x = 0x080;
+            for _ in n..=0x100 {
+                x = (((x ^ (x >> 2) ^ (x >> 3) ^ (x >> 4)) & 1) << 7) | ((x >> 1) & 0x7F);
+            }
+        }
+    }
+    x & 0x3FF
+}
+
+fn pll_decode_n(ndec: u32) -> u32 {
+    let mut n: u32;
+    let mut x: u32;
+    match ndec {
+        0x3FF => n = 0,
+        0x302 => n = 1,
+        0x202 => n = 2,
+        _ => {
+            x = 0x080;
+            n = 0xFFFF_FFFF;
+            for i in (3..=0x100).rev() {
+                if n != 0xFFFF_FFFF {
+                    break;
+                }
+                x = (((x ^ (x >> 2) ^ (x >> 3) ^ (x >> 4)) & 1) << 7) | ((x >> 1) & 0x7F);
+                if (x & 0x3FF) == ndec {
+                    n = i;
+                }
+            }
+        }
+    }
+    n
+}
+
+fn pll_encode_p(p: u32) -> u32 {
+    let mut x: u32;
+    match p {
+        0 => x = 0x7F,
+        1 => x = 0x62,
+        2 => x = 0x42,
+        _ => {
+            x = 0x10;
+            for _ in p..=0x20 {
+                x = (((x ^ (x >> 2)) & 1) << 4) | ((x >> 1) & 0xF);
+            }
+        }
+    }
+    x & 0x3FF
+}
+fn pll_decode_p(pdec: u32) -> u32 {
+    let mut p: u32;
+    let mut x: u32;
+    match pdec {
+        0x7F => p = 0,
+        0x62 => p = 1,
+        0x42 => p = 2,
+        _ => {
+            x = 0x10;
+            p = 0xFFFF_FFFF;
+            for i in (3..=0x20).rev() {
+                if p != 0xFFFF_FFFF {
+                    break;
+                }
+                x = (((x ^ (x >> 2)) & 1) << 4) | ((x >> 1) & 0xF);
+                if (x & 0x3FF) == pdec {
+                    p = i;
+                }
+            }
+        }
+    }
+    p
+}
+fn pll_find_sel(m: u32) -> (u32, u32, u32) {
+    let mut p_sel_i: u32;
+    let p_sel_r: u32 = 0;
+    // bandwidth: compute selP from Multiplier
+    let p_sel_p: u32 = if m < 60 { (m >> 1) + 1 } else { 0x20 - 1 };
+
+    // bandwidth: compute selI from Multiplier
+    if m > 16384 {
+        p_sel_i = 1;
+    } else if m > 8192 {
+        p_sel_i = 2;
+    } else if m > 2048 {
+        p_sel_i = 4;
+    } else if m >= 501 {
+        p_sel_i = 8;
+    } else if m >= 60 {
+        p_sel_i = 4 * (1024 / (m + 9));
+    } else {
+        p_sel_i = (m & 0x3C) + 4;
+    }
+
+    if p_sel_i > ((0x3F << 4) >> 4) {
+        p_sel_i = (0x3F << 4) >> 4;
+    }
+
+    (p_sel_p, p_sel_i, p_sel_r)
+}
+fn greatest_common_divisor(mut m: u32, mut n: u32) -> u32 {
+    let mut tmp: u32;
+    while n != 0 {
+        tmp = n;
+        n = m % n;
+        m = tmp;
+    }
+    m
 }
