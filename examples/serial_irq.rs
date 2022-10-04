@@ -67,23 +67,20 @@ fn FLEXCOMM0() {
             G_SERIAL.borrow(cs).replace(None).unwrap()
         })
     });
-    match serial.pending_event() {
-        Some(x) => {
-            defmt::info!("event: {:?}", defmt::Debug2Format(&x));
+    if let Some(x) = serial.pending_event() {
+        defmt::info!("event: {:?}", defmt::Debug2Format(&x));
 
-            if x == serial::Event::RxLvl {
-                let z = serial.read();
-                match z {
-                    Ok(v) => {
-                        defmt::info!("received: {:a}", v); // -> INFO 97
-                        serial.write(v).unwrap();
-                    }
-                    Err(e) => {
-                        defmt::info!("error reading received char: {:?}", defmt::Debug2Format(&e))
-                    }
+        if x == serial::Event::RxLvl {
+            let z = serial.read();
+            match z {
+                Ok(v) => {
+                    defmt::info!("received: {:a}", v); // -> INFO 97
+                    serial.write(v).unwrap();
+                }
+                Err(e) => {
+                    defmt::info!("error reading received char: {:?}", defmt::Debug2Format(&e))
                 }
             }
         }
-        None => (),
     }
 }

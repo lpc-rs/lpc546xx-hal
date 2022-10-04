@@ -52,7 +52,7 @@ pub enum Error {
 }
 
 /// Interrupt event
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Event {}
 
 /// Transfer data word length

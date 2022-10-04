@@ -13,7 +13,7 @@ mod tests {
     use lpc546xx_hal::{
         pac,
         prelude::*,
-        syscon::{AHBClkDiv, AudioPllClkSel, AudioPllConfig, Config, MainClkSelA, MainClkSelB},
+        syscon::{AHBClkDiv, Config, MainClkSelA, MainClkSelB},
     }; // the HAL we'll test
 
     #[test]
@@ -45,32 +45,60 @@ mod tests {
         assert_eq!(unwrap!(syscon.get_main_clock_freq()), 96_000_000.Hz());
     }
 
-    /// this test does not fully test the audio pll, because the ndec/pdec/mdec have
-    /// not been inverted to provide calculation, and their config values still come
-    /// from NXP Config tool, because their pseudo code did not produce the same
-    /// values as their tool. TODO: fix the api and implement a better test.
     #[test]
-    fn clk_audio_pll_partial() {
+    fn clk_audio_pll_512mhz() {
         let dp = unsafe { pac::Peripherals::steal() };
-        let audiopll_config = AudioPllConfig {
-            clksel: AudioPllClkSel::fro_12m,
-            ndec: 1,
-            mdec: 30580,
-            bypass_pdiv: false,
-            pdec: 66,
-            pllrate: 512000000.Hz(),
-        };
         let config = Config {
             xtal_freq: None,
             rtc_32k_present: None,
             mainclksela: MainClkSelA::fro_12m,
             mainclkselb: MainClkSelB::mainclka,
             ahbclkdiv: AHBClkDiv::NotDivided,
-            audiopll: Some(audiopll_config),
             mclkin: None,
         };
-        let syscon = dp.SYSCON.freeze(config);
-        let audio_clk = syscon.get_audio_pll_clk_clock_freq().unwrap();
-        assert_eq!(audio_clk, 512.MHz());
+        let mut syscon = dp.SYSCON.freeze(config);
+        let pll_freq = syscon
+            .try_audio_pll_config(512_000_000.Hz())
+            .unwrap()
+            .unwrap();
+        assert_eq!(pll_freq, 512.MHz());
+    }
+
+    #[test]
+    fn clk_audio_pll_18mhz() {
+        let dp = unsafe { pac::Peripherals::steal() };
+        let config = Config {
+            xtal_freq: None,
+            rtc_32k_present: None,
+            mainclksela: MainClkSelA::fro_12m,
+            mainclkselb: MainClkSelB::mainclka,
+            ahbclkdiv: AHBClkDiv::NotDivided,
+            mclkin: None,
+        };
+        let mut syscon = dp.SYSCON.freeze(config);
+        let pll_freq = syscon
+            .try_audio_pll_config(18_000_000.Hz())
+            .unwrap()
+            .unwrap();
+        assert_eq!(pll_freq, 18.MHz());
+    }
+
+    #[test]
+    fn clk_audio_pll_43mhz() {
+        let dp = unsafe { pac::Peripherals::steal() };
+        let config = Config {
+            xtal_freq: None,
+            rtc_32k_present: None,
+            mainclksela: MainClkSelA::fro_12m,
+            mainclkselb: MainClkSelB::mainclka,
+            ahbclkdiv: AHBClkDiv::NotDivided,
+            mclkin: None,
+        };
+        let mut syscon = dp.SYSCON.freeze(config);
+        let pll_freq = syscon
+            .try_audio_pll_config(43_000_000.Hz())
+            .unwrap()
+            .unwrap();
+        assert_eq!(pll_freq, 43.MHz());
     }
 }

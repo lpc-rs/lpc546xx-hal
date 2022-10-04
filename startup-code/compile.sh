@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Compiles `flash.c` using the GCC toolchain. `build.rs` makes sure that the
+# Compiles `startup.s` using the GCC toolchain. `build.rs` makes sure that the
 # resulting library is linked.
 #
 # Since requiring all users of this HAL to have the GCC toolchain installed

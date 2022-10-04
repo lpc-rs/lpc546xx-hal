@@ -31,13 +31,13 @@ mod tests {
     #[test]
     fn test_time_setting(state: &mut State) {
         let mut rtc = state.rtc.take().unwrap();
-        rtc.set_time(NaiveDateTime::from_timestamp(0 as i64, 0));
+        rtc.set_time(NaiveDateTime::from_timestamp(0, 0));
         assert!(rtc.get_time().timestamp() == 0);
 
-        rtc.set_time(NaiveDateTime::from_timestamp(100000 as i64, 0));
+        rtc.set_time(NaiveDateTime::from_timestamp(100000, 0));
         assert!(rtc.get_time().timestamp() == 100000);
 
-        rtc.set_time(NaiveDateTime::from_timestamp(123456789 as i64, 0));
+        rtc.set_time(NaiveDateTime::from_timestamp(123456789, 0));
         assert!(rtc.get_time().timestamp() == 123456789);
         state.rtc = Some(rtc)
     }
@@ -61,7 +61,7 @@ mod tests {
         for i in 0..7 {
             rtc.write_general_purpose_registers(i as usize, !i).unwrap();
         }
-        for i in 0..7 as u32 {
+        for i in 0..7 {
             assert!(rtc.read_general_purpose_registers(i as usize).unwrap() == !i);
         }
         state.rtc = Some(rtc)
