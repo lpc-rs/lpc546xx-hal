@@ -41,7 +41,7 @@ pub enum Error {
 }
 
 /// Interrupt event
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Event {
     /// Determines whether an interrupt occurs when a transmit error occurs,
     /// based on the TXERR flag in the FIFOSTAT register.
