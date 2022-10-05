@@ -31,7 +31,7 @@ mod tests {
 
         let i2c = dp
             .I2C2
-            .i2c(dp.FLEXCOMM2, sda, scl, 100_000.Hz().into(), &mut syscon)
+            .i2c(dp.FLEXCOMM2, sda, scl, 100_000.Hz(), &mut syscon)
             .unwrap();
 
         State { i2c: Some(i2c) }
@@ -43,9 +43,9 @@ mod tests {
         const MMA8652FCR1_ADDR: u8 = 0b0011101;
         const WHO_AM_I: u8 = 0x0D;
         const DEVICE_ID: u8 = 0x4A;
-        let mut buffer = [WHO_AM_I; 1];
+        let buffer = [WHO_AM_I; 1];
         let mut content = [0u8; 1];
-        i2c.write_read(MMA8652FCR1_ADDR, &mut buffer, &mut content)
+        i2c.write_read(MMA8652FCR1_ADDR, &buffer, &mut content)
             .unwrap();
         assert!(content[0] == DEVICE_ID);
         state.i2c = Some(i2c);
@@ -57,9 +57,9 @@ mod tests {
         const MMA8652FCR1_ADDR: u8 = 0b0011101;
         const WHO_AM_I: u8 = 0x0D;
         const DEVICE_ID: u8 = 0x4A;
-        let mut buffer = [0x0A; 1]; // start reading at address 0, until WHO_AM_I reg
+        let buffer = [0x0A; 1]; // start reading at address 0, until WHO_AM_I reg
         let mut content = [0u8; (WHO_AM_I + 1 - 0x0A) as usize];
-        i2c.write_read(MMA8652FCR1_ADDR, &mut buffer, &mut content)
+        i2c.write_read(MMA8652FCR1_ADDR, &buffer, &mut content)
             .unwrap();
         assert!(content[(WHO_AM_I - 0x0A) as usize] == DEVICE_ID);
         state.i2c = Some(i2c);
@@ -69,9 +69,9 @@ mod tests {
         let id_doc: u16 = 0b1000_1001_0000_0100;
         let mut i2c = state.i2c.take().unwrap();
         const WM8904CGEFL_ADDR: u8 = 0b0011010;
-        let mut buffer = [0x00; 1]; // start reading at address 0, until WHO_AM_I reg
+        let buffer = [0x00; 1]; // start reading at address 0, until WHO_AM_I reg
         let mut content = [0u8; 2];
-        i2c.write_read(WM8904CGEFL_ADDR, &mut buffer, &mut content)
+        i2c.write_read(WM8904CGEFL_ADDR, &buffer, &mut content)
             .unwrap();
         let id_read: u16 = content[1] as u16 | (content[0] as u16) << 8;
         assert!(id_read == id_doc);
@@ -83,9 +83,9 @@ mod tests {
         let mut i2c = state.i2c.take().unwrap();
         const WM8904CGEFL_ADDR: u8 = 0b0011010;
         let id_doc: u16 = 0b1000_1001_0000_0100;
-        let mut buffer = [0x00; 1];
+        let buffer = [0x00; 1];
         let mut content = [0u8; 2];
-        i2c.write(WM8904CGEFL_ADDR, &mut buffer).unwrap();
+        i2c.write(WM8904CGEFL_ADDR, &buffer).unwrap();
         i2c.read(WM8904CGEFL_ADDR, &mut content).unwrap();
         let id_read: u16 = content[1] as u16 | (content[0] as u16) << 8;
         assert!(id_read == id_doc);
@@ -99,9 +99,9 @@ mod tests {
         const MMA8652FCR1_ADDR: u8 = 0b0011101;
         const WHO_AM_I: u8 = 0x0D;
         const DEVICE_ID: u8 = 0x4A;
-        let mut buffer = [WHO_AM_I; 1];
+        let buffer = [WHO_AM_I; 1];
         let mut content = [0u8; 1];
-        i2c.write_read(MMA8652FCR1_ADDR, &mut buffer, &mut content)
+        i2c.write_read(MMA8652FCR1_ADDR, &buffer, &mut content)
             .unwrap();
         assert!(content[0] == DEVICE_ID);
         state.i2c = Some(i2c);
