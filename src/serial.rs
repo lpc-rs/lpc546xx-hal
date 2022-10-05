@@ -14,7 +14,9 @@ use core::marker::PhantomData;
 use crate::hal;
 use crate::hal::prelude::*;
 
-use crate::flexcomm::{FlexCommAsUart, FlexcommClockControl, FlexcommClockSource};
+use crate::flexcomm::{
+    FlexCommAsUart, FlexcommCapabilities, FlexcommClockControl, FlexcommClockSource,
+};
 use crate::gpio::gpio::*;
 use crate::gpio::{AltMode::*, PinMode};
 use crate::syscon::{ClockControl, Syscon};
@@ -157,7 +159,16 @@ impl Config {
 
 /// Invalid configuration indicator
 #[derive(Debug)]
-pub struct InvalidConfig;
+pub enum InvalidConfig {
+    /// This flexcomm in not capable of being used as an USART peripheral
+    NotUsartCapable,
+    /// Source Clock is too high
+    SourceClockTooHigh,
+    /// Baudrate not supported by this clock conf
+    BaudrateNotSupported,
+    /// No source clock
+    NoSourceClock,
+}
 
 impl Default for Config {
     fn default() -> Config {
@@ -336,11 +347,29 @@ impl Serial<$UARTX, $FLEXCOMMX> {
     where
         TX: TxPin<$UARTX, $FLEXCOMMX>,
         RX: RxPin<$UARTX, $FLEXCOMMX>,
-        $FLEXCOMMX: FlexCommAsUart<$UARTX> + ClockControl + FlexcommClockControl,
+        $FLEXCOMMX: FlexCommAsUart<$UARTX> + ClockControl + FlexcommClockControl + FlexcommCapabilities,
     {
+        // set pins as alt function
         tx.setup();
         rx.setup();
+
+        // enable clock
         flexcomm.enable_clock(syscon);
+        // set clock source as FRO12
+        flexcomm.set_source_clock(FlexcommClockSource::fro_12_mhz, syscon);
+
+        if !flexcomm.is_usart_capable() {
+            return Err(InvalidConfig::NotUsartCapable);
+        }
+        match flexcomm.get_clock_freq(syscon) {
+            Some(freq) => {
+                if freq > 48_000_000.Hz() {
+                    return Err(InvalidConfig::SourceClockTooHigh);
+                }
+            }
+            None => return Err(InvalidConfig::NoSourceClock),
+        }
+
         flexcomm.as_usart();
 
         // Empty and enable tx/rx FIFO
@@ -410,10 +439,6 @@ impl Serial<$UARTX, $FLEXCOMMX> {
                 .enabled()
         });
 
-        // setup baudrate
-        let fcsource = FlexcommClockSource::fro_12_mhz;
-
-        flexcomm.set_clock(fcsource, syscon);
         let source_clock = flexcomm.get_clock_freq(syscon).unwrap().0;
         let mut best_diff: u32 = u32::MAX;
         let mut best_osrval: u32 = 0xF;
@@ -453,15 +478,15 @@ impl Serial<$UARTX, $FLEXCOMMX> {
             };
             if diff > ((config.baudrate.0 / 100) * 3) {
                 // no support for this baudrate
-                return Err(InvalidConfig);
+                return Err(InvalidConfig::BaudrateNotSupported);
             }
 
             // value over range
             if best_brgval > 0xFFFF {
-                return Err(InvalidConfig);
+                return Err(InvalidConfig::BaudrateNotSupported);
             }
             if best_osrval > 0xF {
-                return Err(InvalidConfig);
+                return Err(InvalidConfig::BaudrateNotSupported);
             }
             usart
                 .osr

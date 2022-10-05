@@ -311,7 +311,7 @@ impl I2c<$I2CX, $FLEXCOMMX> {
         i2c.cfg.modify(|_, w| w.msten().enabled());
 
         let fcsource = FlexcommClockSource::fro_12_mhz;
-        flexcomm.set_clock(fcsource, syscon);
+        flexcomm.set_source_clock(fcsource, syscon);
         let source_clock = flexcomm.get_clock_freq(syscon).unwrap().0;
 
         let mut best_err = 0;
