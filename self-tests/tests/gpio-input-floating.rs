@@ -9,7 +9,10 @@
 use defmt_rtt as _; // transport layer for defmt logs
 use lpc546xx_hal::{
     self as _,
-    gpio::{gpio::{P4_4, P4_5}, Floating, Input},
+    gpio::{
+        gpio::{P4_4, P4_5},
+        Floating, Input,
+    },
 };
 use panic_probe as _; // panicking behavior
 
@@ -52,7 +55,7 @@ mod tests {
     #[test]
     fn vdd_pulled_low_is_high(state: &mut State) {
         // take the pin out of the state, put into a pull-down input
-        // assert that it is high and put back into the state    
+        // assert that it is high and put back into the state
         let input_vdd = state.input_vdd.take().unwrap();
         let input_vdd = input_vdd.into_pull_down_input();
         assert!(input_vdd.is_high().unwrap());
