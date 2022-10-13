@@ -23,6 +23,20 @@ pub use lpc546xx_pac::lpc54618 as pac;
 #[cfg(feature = "lpc54628")]
 pub use lpc546xx_pac::lpc54628 as pac;
 
+// implement the pre_init as global_asm. This is needed to turn on the ram.
+// only if feature disable-pre-init-blob is not set
+#[cfg(not(feature = "disable-pre-init-blob"))]
+core::arch::global_asm!(
+    "
+    .text
+    .globl __pre_init
+    __pre_init:",
+    "ldr r0, =0x40000220
+    mov r1, #56
+    str r1, [r0]
+    bx lr"
+);
+
 /// CRC engine
 pub mod crc;
 /// flexcomm module

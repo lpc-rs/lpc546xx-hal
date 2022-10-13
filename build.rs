@@ -1,5 +1,5 @@
 use std::env;
-use std::fs::{self, File};
+use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
 
@@ -81,20 +81,6 @@ fn main() {
             .unwrap()
             .write_all(linker.as_bytes())
             .unwrap();
-        println!("cargo:rustc-link-search={}", out.display());
-    }
-
-    println!("cargo:rerun-if-changed=build.rs");
-
-    // Copy Binary blob required for SDRAM enabling when cortex-m-rt calls __pre_init
-    // somewhere the linker can find it, and tell cargo to link it
-    if !cfg!(feature = "disable-pre-init-blob") {
-        let blob_name = "startup";
-        let blob_file = format!("lib{}.a", blob_name);
-        let blob_path = format!("startup-code/{}", blob_file);
-        fs::copy(&blob_path, out.join(blob_file))
-            .expect("Failed to copy binary blob for startup (ram enable)");
-        println!("cargo:rustc-link-lib=static={}", blob_name);
         println!("cargo:rustc-link-search={}", out.display());
     }
 
